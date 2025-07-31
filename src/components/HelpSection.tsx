@@ -3,8 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Send, MessageSquare, Plus } from 'lucide-react';
+
+interface Suggestion {
+  food: string;
+  comment: string;
+  date: string;
+}
 
 export const HelpSection: React.FC = () => {
   const [foodName, setFoodName] = useState('');
