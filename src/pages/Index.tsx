@@ -30,32 +30,267 @@ interface MealEntry {
   timestamp: string;
 }
 
-const SAMPLE_FOODS = [
+const COMPREHENSIVE_FOOD_DATABASE = [
+  // Grains & Cereals
+  { name: "Basmati Rice (Cooked)", calories: 121, protein: 2.5, per: "100g" },
+  { name: "Brown Rice (Cooked)", calories: 111, protein: 2.6, per: "100g" },
+  { name: "Jasmine Rice (Cooked)", calories: 130, protein: 2.7, per: "100g" },
+  { name: "Quinoa (Cooked)", calories: 120, protein: 4.4, per: "100g" },
+  { name: "Wheat Flour", calories: 364, protein: 10.3, per: "100g" },
   { name: "Roti (Wheat)", calories: 104, protein: 3.1, per: "1 piece" },
-  { name: "Dal (Lentils)", calories: 116, protein: 9, per: "100g" },
-  { name: "Rice (Cooked)", calories: 130, protein: 2.7, per: "100g" },
-  { name: "Chicken Breast", calories: 165, protein: 31, per: "100g" },
-  { name: "Paneer", calories: 265, protein: 18, per: "100g" },
-  { name: "Butter Chicken", calories: 438, protein: 24, per: "100g" },
-  { name: "Banana", calories: 89, protein: 1.1, per: "1 medium" },
-  { name: "Apple", calories: 52, protein: 0.3, per: "1 medium" },
-  { name: "Egg (Boiled)", calories: 78, protein: 6.3, per: "1 large" },
-  { name: "Milk (Whole)", calories: 42, protein: 3.4, per: "100ml" },
-  { name: "Almonds", calories: 579, protein: 21, per: "100g" },
-  { name: "Oats", calories: 389, protein: 17, per: "100g" },
-  { name: "Greek Yogurt", calories: 59, protein: 10, per: "100g" },
-  { name: "Salmon", calories: 208, protein: 25, per: "100g" },
-  { name: "Sweet Potato", calories: 86, protein: 1.6, per: "100g" },
   { name: "Chapati", calories: 120, protein: 3.5, per: "1 medium" },
+  { name: "Naan", calories: 262, protein: 9, per: "1 piece" },
+  { name: "Paratha (Plain)", calories: 320, protein: 8, per: "1 piece" },
+  { name: "Puri", calories: 501, protein: 6.8, per: "100g" },
+  { name: "Dosa (Plain)", calories: 168, protein: 4, per: "1 piece" },
+  { name: "Idli", calories: 39, protein: 2, per: "1 piece" },
+  { name: "Uttapam", calories: 147, protein: 3.5, per: "1 piece" },
+  { name: "Poha", calories: 76, protein: 2.6, per: "100g" },
+  { name: "Upma", calories: 109, protein: 3.2, per: "100g" },
+  { name: "Bread (White)", calories: 265, protein: 9, per: "100g" },
+  { name: "Bread (Brown)", calories: 247, protein: 13, per: "100g" },
+  { name: "Bagel", calories: 250, protein: 10, per: "1 medium" },
+  { name: "Croissant", calories: 231, protein: 4.7, per: "1 medium" },
+  { name: "Pasta (Cooked)", calories: 131, protein: 5, per: "100g" },
+  { name: "Oats", calories: 389, protein: 17, per: "100g" },
+  { name: "Cornflakes", calories: 378, protein: 7.5, per: "100g" },
+  { name: "Muesli", calories: 353, protein: 8.9, per: "100g" },
+  { name: "Barley", calories: 354, protein: 12.5, per: "100g" },
+  { name: "Millet", calories: 378, protein: 11, per: "100g" },
+
+  // Legumes & Pulses
+  { name: "Dal (Lentils)", calories: 116, protein: 9, per: "100g" },
+  { name: "Moong Dal", calories: 347, protein: 24, per: "100g" },
+  { name: "Chana Dal", calories: 364, protein: 22, per: "100g" },
+  { name: "Toor Dal", calories: 343, protein: 22, per: "100g" },
+  { name: "Urad Dal", calories: 341, protein: 25, per: "100g" },
+  { name: "Masoor Dal", calories: 352, protein: 25, per: "100g" },
+  { name: "Rajma (Kidney Beans)", calories: 127, protein: 8.7, per: "100g" },
+  { name: "Chickpeas (Chana)", calories: 164, protein: 8.9, per: "100g" },
+  { name: "Black Beans", calories: 132, protein: 8.9, per: "100g" },
+  { name: "Pinto Beans", calories: 143, protein: 9, per: "100g" },
+  { name: "Lentil Soup", calories: 116, protein: 9, per: "100g" },
+  { name: "Hummus", calories: 166, protein: 8, per: "100g" },
+  { name: "Falafel", calories: 333, protein: 13, per: "100g" },
+
+  // Vegetables - Indian
+  { name: "Aloo (Potato)", calories: 77, protein: 2, per: "100g" },
+  { name: "Gobi (Cauliflower)", calories: 25, protein: 1.9, per: "100g" },
+  { name: "Baingan (Eggplant)", calories: 25, protein: 1, per: "100g" },
+  { name: "Bhindi (Okra)", calories: 33, protein: 1.9, per: "100g" },
+  { name: "Palak (Spinach)", calories: 23, protein: 2.9, per: "100g" },
+  { name: "Methi (Fenugreek)", calories: 49, protein: 4.4, per: "100g" },
+  { name: "Karela (Bitter Gourd)", calories: 17, protein: 1, per: "100g" },
+  { name: "Lauki (Bottle Gourd)", calories: 14, protein: 0.6, per: "100g" },
+  { name: "Tori (Ridge Gourd)", calories: 20, protein: 1.2, per: "100g" },
+  { name: "Shimla Mirch (Bell Pepper)", calories: 31, protein: 1, per: "100g" },
+  { name: "Pyaz (Onion)", calories: 40, protein: 1.1, per: "100g" },
+  { name: "Tamatar (Tomato)", calories: 18, protein: 0.9, per: "100g" },
+  { name: "Gajar (Carrot)", calories: 41, protein: 0.9, per: "100g" },
+  { name: "Muli (Radish)", calories: 16, protein: 0.7, per: "100g" },
+  { name: "Shalgam (Turnip)", calories: 28, protein: 0.9, per: "100g" },
+  { name: "Ginger", calories: 80, protein: 1.8, per: "100g" },
+  { name: "Garlic", calories: 149, protein: 6.4, per: "100g" },
+
+  // Vegetables - International
+  { name: "Broccoli", calories: 34, protein: 2.8, per: "100g" },
+  { name: "Brussels Sprouts", calories: 43, protein: 3.4, per: "100g" },
+  { name: "Cabbage", calories: 25, protein: 1.3, per: "100g" },
+  { name: "Lettuce", calories: 15, protein: 1.4, per: "100g" },
+  { name: "Cucumber", calories: 16, protein: 0.7, per: "100g" },
+  { name: "Zucchini", calories: 17, protein: 1.2, per: "100g" },
+  { name: "Asparagus", calories: 20, protein: 2.2, per: "100g" },
+  { name: "Celery", calories: 14, protein: 0.7, per: "100g" },
+  { name: "Sweet Potato", calories: 86, protein: 1.6, per: "100g" },
+  { name: "Mushrooms", calories: 22, protein: 3.1, per: "100g" },
+  { name: "Artichoke", calories: 47, protein: 3.3, per: "100g" },
+  { name: "Kale", calories: 49, protein: 4.3, per: "100g" },
+  { name: "Arugula", calories: 25, protein: 2.6, per: "100g" },
+
+  // Fruits - Indian & Tropical
+  { name: "Aam (Mango)", calories: 60, protein: 0.8, per: "100g" },
+  { name: "Kela (Banana)", calories: 89, protein: 1.1, per: "1 medium" },
+  { name: "Seb (Apple)", calories: 52, protein: 0.3, per: "1 medium" },
+  { name: "Santra (Orange)", calories: 47, protein: 0.9, per: "1 medium" },
+  { name: "Angur (Grapes)", calories: 62, protein: 0.6, per: "100g" },
+  { name: "Papita (Papaya)", calories: 43, protein: 0.5, per: "100g" },
+  { name: "Ananas (Pineapple)", calories: 50, protein: 0.5, per: "100g" },
+  { name: "Nashpati (Pear)", calories: 57, protein: 0.4, per: "100g" },
+  { name: "Amrud (Guava)", calories: 68, protein: 2.6, per: "100g" },
+  { name: "Kiwi", calories: 61, protein: 1.1, per: "100g" },
+  { name: "Strawberries", calories: 32, protein: 0.7, per: "100g" },
+  { name: "Blueberries", calories: 57, protein: 0.7, per: "100g" },
+  { name: "Pomegranate", calories: 83, protein: 1.7, per: "100g" },
+  { name: "Watermelon", calories: 30, protein: 0.6, per: "100g" },
+  { name: "Muskmelon", calories: 34, protein: 0.8, per: "100g" },
+  { name: "Coconut", calories: 354, protein: 3.3, per: "100g" },
+  { name: "Dates", calories: 277, protein: 1.8, per: "100g" },
+  { name: "Figs", calories: 74, protein: 0.8, per: "100g" },
+  { name: "Raisins", calories: 299, protein: 3.1, per: "100g" },
+
+  // Protein Sources
+  { name: "Chicken Breast", calories: 165, protein: 31, per: "100g" },
+  { name: "Chicken Thigh", calories: 209, protein: 26, per: "100g" },
+  { name: "Chicken Drumstick", calories: 172, protein: 28, per: "100g" },
+  { name: "Mutton", calories: 294, protein: 25, per: "100g" },
+  { name: "Goat Meat", calories: 143, protein: 27, per: "100g" },
+  { name: "Beef", calories: 250, protein: 26, per: "100g" },
+  { name: "Pork", calories: 242, protein: 27, per: "100g" },
+  { name: "Fish (Rohu)", calories: 97, protein: 16.6, per: "100g" },
+  { name: "Fish (Pomfret)", calories: 96, protein: 19, per: "100g" },
+  { name: "Salmon", calories: 208, protein: 25, per: "100g" },
+  { name: "Tuna", calories: 144, protein: 30, per: "100g" },
+  { name: "Sardines", calories: 208, protein: 25, per: "100g" },
+  { name: "Prawns", calories: 99, protein: 18, per: "100g" },
+  { name: "Crab", calories: 97, protein: 19, per: "100g" },
+  { name: "Egg (Whole)", calories: 155, protein: 13, per: "100g" },
+  { name: "Egg (Boiled)", calories: 78, protein: 6.3, per: "1 large" },
+  { name: "Egg White", calories: 17, protein: 3.6, per: "1 large" },
+  { name: "Egg Yolk", calories: 55, protein: 2.7, per: "1 large" },
+
+  // Dairy Products
+  { name: "Milk (Whole)", calories: 42, protein: 3.4, per: "100ml" },
+  { name: "Milk (Toned)", calories: 58, protein: 3.2, per: "100ml" },
+  { name: "Milk (Skimmed)", calories: 34, protein: 3.4, per: "100ml" },
+  { name: "Curd/Yogurt", calories: 98, protein: 11, per: "100g" },
+  { name: "Greek Yogurt", calories: 59, protein: 10, per: "100g" },
+  { name: "Paneer", calories: 265, protein: 18, per: "100g" },
+  { name: "Cottage Cheese", calories: 98, protein: 11, per: "100g" },
+  { name: "Cheese (Cheddar)", calories: 402, protein: 25, per: "100g" },
+  { name: "Cheese (Mozzarella)", calories: 300, protein: 22, per: "100g" },
+  { name: "Butter", calories: 717, protein: 0.9, per: "100g" },
+  { name: "Ghee", calories: 900, protein: 0, per: "100g" },
+  { name: "Cream", calories: 345, protein: 2.1, per: "100g" },
+  { name: "Buttermilk", calories: 40, protein: 3.3, per: "100ml" },
+
+  // Nuts & Seeds
+  { name: "Almonds", calories: 579, protein: 21, per: "100g" },
+  { name: "Walnuts", calories: 654, protein: 15, per: "100g" },
+  { name: "Cashews", calories: 553, protein: 18, per: "100g" },
+  { name: "Pistachios", calories: 560, protein: 20, per: "100g" },
+  { name: "Peanuts", calories: 567, protein: 26, per: "100g" },
+  { name: "Brazil Nuts", calories: 659, protein: 14, per: "100g" },
+  { name: "Hazelnuts", calories: 628, protein: 15, per: "100g" },
+  { name: "Pecans", calories: 691, protein: 9, per: "100g" },
+  { name: "Sunflower Seeds", calories: 584, protein: 21, per: "100g" },
+  { name: "Pumpkin Seeds", calories: 559, protein: 30, per: "100g" },
+  { name: "Chia Seeds", calories: 486, protein: 17, per: "100g" },
+  { name: "Flax Seeds", calories: 534, protein: 18, per: "100g" },
+  { name: "Sesame Seeds", calories: 573, protein: 18, per: "100g" },
+
+  // Indian Snacks
   { name: "Samosa", calories: 252, protein: 6, per: "1 piece" },
-  { name: "Biryani", calories: 290, protein: 12, per: "1 cup" },
-  { name: "Pizza Slice", calories: 285, protein: 12, per: "1 slice" },
-  { name: "Burger", calories: 540, protein: 25, per: "1 medium" },
+  { name: "Pakora", calories: 300, protein: 8, per: "100g" },
+  { name: "Kachori", calories: 400, protein: 8, per: "1 piece" },
+  { name: "Dhokla", calories: 160, protein: 4, per: "100g" },
+  { name: "Vada", calories: 220, protein: 5, per: "1 piece" },
+  { name: "Bhel Puri", calories: 168, protein: 4, per: "100g" },
+  { name: "Sev Puri", calories: 200, protein: 5, per: "100g" },
+  { name: "Pani Puri", calories: 36, protein: 1, per: "1 piece" },
+  { name: "Chaat", calories: 180, protein: 6, per: "100g" },
+  { name: "Tikki", calories: 165, protein: 4, per: "1 piece" },
+  { name: "Namak Para", calories: 515, protein: 9, per: "100g" },
+  { name: "Murukku", calories: 520, protein: 8, per: "100g" },
+  { name: "Mathri", calories: 450, protein: 10, per: "100g" },
+
+  // Fast Food & International
+  { name: "Pizza Slice (Cheese)", calories: 285, protein: 12, per: "1 slice" },
+  { name: "Pizza Slice (Pepperoni)", calories: 313, protein: 13, per: "1 slice" },
+  { name: "Burger (Veg)", calories: 390, protein: 16, per: "1 medium" },
+  { name: "Burger (Chicken)", calories: 540, protein: 25, per: "1 medium" },
   { name: "French Fries", calories: 365, protein: 4, per: "100g" },
-  { name: "Orange", calories: 47, protein: 0.9, per: "1 medium" },
-  { name: "Coconut Water", calories: 19, protein: 0.7, per: "100ml" },
+  { name: "Onion Rings", calories: 411, protein: 6, per: "100g" },
+  { name: "Hot Dog", calories: 290, protein: 10, per: "1 medium" },
+  { name: "Sandwich (Veg)", calories: 240, protein: 8, per: "1 sandwich" },
+  { name: "Sandwich (Chicken)", calories: 320, protein: 24, per: "1 sandwich" },
+  { name: "Tacos", calories: 226, protein: 9, per: "1 taco" },
+  { name: "Burrito", calories: 314, protein: 16, per: "1 medium" },
+  { name: "Pasta (Alfredo)", calories: 389, protein: 14, per: "100g" },
+  { name: "Pasta (Marinara)", calories: 131, protein: 5, per: "100g" },
+  { name: "Sushi Roll", calories: 200, protein: 9, per: "6 pieces" },
+
+  // Indian Main Dishes
+  { name: "Biryani (Chicken)", calories: 290, protein: 12, per: "1 cup" },
+  { name: "Biryani (Veg)", calories: 250, protein: 6, per: "1 cup" },
+  { name: "Butter Chicken", calories: 438, protein: 24, per: "100g" },
+  { name: "Chicken Curry", calories: 180, protein: 20, per: "100g" },
+  { name: "Chicken Tikka", calories: 150, protein: 25, per: "100g" },
+  { name: "Tandoori Chicken", calories: 150, protein: 27, per: "100g" },
+  { name: "Palak Paneer", calories: 270, protein: 14, per: "100g" },
+  { name: "Shahi Paneer", calories: 300, protein: 12, per: "100g" },
+  { name: "Aloo Gobi", calories: 55, protein: 2, per: "100g" },
+  { name: "Baingan Bharta", calories: 85, protein: 2, per: "100g" },
+  { name: "Chole", calories: 164, protein: 8.9, per: "100g" },
+  { name: "Rajma", calories: 127, protein: 8.7, per: "100g" },
+  { name: "Kadhi", calories: 62, protein: 2.4, per: "100g" },
+
+  // Asian & International Cuisines
+  { name: "Fried Rice", calories: 163, protein: 3, per: "100g" },
+  { name: "Noodles (Hakka)", calories: 138, protein: 5, per: "100g" },
+  { name: "Chow Mein", calories: 198, protein: 6, per: "100g" },
+  { name: "Ramen", calories: 436, protein: 10, per: "100g" },
+  { name: "Maggi/Instant Noodles", calories: 435, protein: 11, per: "100g" },
+  { name: "Tofu", calories: 76, protein: 8, per: "100g" },
+  { name: "Kimchi", calories: 15, protein: 1.1, per: "100g" },
+  { name: "Soy Sauce", calories: 8, protein: 1.3, per: "1 tbsp" },
+  { name: "Miso Soup", calories: 84, protein: 6, per: "100g" },
+  { name: "Tom Yum Soup", calories: 58, protein: 8, per: "100g" },
+  { name: "Pad Thai", calories: 181, protein: 5, per: "100g" },
+  { name: "Spring Roll", calories: 140, protein: 4, per: "1 piece" },
+
+  // Beverages
   { name: "Masala Chai", calories: 50, protein: 2, per: "1 cup" },
-  { name: "Curd", calories: 98, protein: 11, per: "100g" }
+  { name: "Green Tea", calories: 2, protein: 0, per: "1 cup" },
+  { name: "Black Tea", calories: 2, protein: 0, per: "1 cup" },
+  { name: "Coffee (Black)", calories: 2, protein: 0.3, per: "1 cup" },
+  { name: "Coffee (with Milk)", calories: 38, protein: 2, per: "1 cup" },
+  { name: "Coconut Water", calories: 19, protein: 0.7, per: "100ml" },
+  { name: "Orange Juice", calories: 45, protein: 0.7, per: "100ml" },
+  { name: "Apple Juice", calories: 46, protein: 0.1, per: "100ml" },
+  { name: "Mango Juice", calories: 60, protein: 0.4, per: "100ml" },
+  { name: "Lassi (Sweet)", calories: 89, protein: 2.4, per: "100ml" },
+  { name: "Buttermilk", calories: 40, protein: 3.3, per: "100ml" },
+  { name: "Soda/Cola", calories: 39, protein: 0, per: "100ml" },
+  { name: "Energy Drink", calories: 45, protein: 0, per: "100ml" },
+
+  // Sweets & Desserts
+  { name: "Gulab Jamun", calories: 387, protein: 4, per: "1 piece" },
+  { name: "Rasgulla", calories: 186, protein: 3, per: "1 piece" },
+  { name: "Jalebi", calories: 150, protein: 1, per: "1 piece" },
+  { name: "Laddu", calories: 186, protein: 3, per: "1 piece" },
+  { name: "Barfi", calories: 380, protein: 8, per: "100g" },
+  { name: "Kheer", calories: 97, protein: 3.5, per: "100g" },
+  { name: "Halwa", calories: 518, protein: 5, per: "100g" },
+  { name: "Ice Cream", calories: 207, protein: 3.5, per: "100g" },
+  { name: "Chocolate (Dark)", calories: 546, protein: 5, per: "100g" },
+  { name: "Chocolate (Milk)", calories: 535, protein: 8, per: "100g" },
+  { name: "Cookies", calories: 502, protein: 5.9, per: "100g" },
+  { name: "Cake", calories: 257, protein: 4, per: "100g" },
+
+  // Spices & Condiments
+  { name: "Turmeric", calories: 354, protein: 7.8, per: "100g" },
+  { name: "Cumin", calories: 375, protein: 18, per: "100g" },
+  { name: "Coriander Seeds", calories: 298, protein: 12, per: "100g" },
+  { name: "Red Chili Powder", calories: 282, protein: 13, per: "100g" },
+  { name: "Garam Masala", calories: 379, protein: 14, per: "100g" },
+  { name: "Pickle (Mango)", calories: 135, protein: 0.5, per: "100g" },
+  { name: "Chutney (Mint)", calories: 42, protein: 3.7, per: "100g" },
+  { name: "Chutney (Tamarind)", calories: 239, protein: 2.8, per: "100g" },
+
+  // Oils & Fats
+  { name: "Olive Oil", calories: 884, protein: 0, per: "100g" },
+  { name: "Coconut Oil", calories: 862, protein: 0, per: "100g" },
+  { name: "Mustard Oil", calories: 884, protein: 0, per: "100g" },
+  { name: "Sunflower Oil", calories: 884, protein: 0, per: "100g" },
+  { name: "Groundnut Oil", calories: 884, protein: 0, per: "100g" },
+
+  // Miscellaneous
+  { name: "Honey", calories: 304, protein: 0.3, per: "100g" },
+  { name: "Sugar", calories: 387, protein: 0, per: "100g" },
+  { name: "Jaggery", calories: 383, protein: 0.4, per: "100g" },
+  { name: "Salt", calories: 0, protein: 0, per: "100g" },
+  { name: "Vinegar", calories: 18, protein: 0, per: "100ml" },
+  { name: "Lemon Juice", calories: 22, protein: 0.4, per: "100ml" }
 ];
 
 const Index = () => {
@@ -65,7 +300,7 @@ const Index = () => {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState<FoodItem[]>([]);
-  const [filteredFoods, setFilteredFoods] = useState(SAMPLE_FOODS);
+  const [filteredFoods, setFilteredFoods] = useState(COMPREHENSIVE_FOOD_DATABASE);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('userProfile');
@@ -80,9 +315,9 @@ const Index = () => {
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredFoods(SAMPLE_FOODS);
+      setFilteredFoods(COMPREHENSIVE_FOOD_DATABASE);
     } else {
-      setFilteredFoods(SAMPLE_FOODS.filter(food => 
+      setFilteredFoods(COMPREHENSIVE_FOOD_DATABASE.filter(food => 
         food.name.toLowerCase().includes(searchQuery.toLowerCase())
       ));
     }
@@ -107,7 +342,7 @@ const Index = () => {
     loadTodaysMeals();
   };
 
-  const addFoodItem = (food: typeof SAMPLE_FOODS[0]) => {
+  const addFoodItem = (food: typeof COMPREHENSIVE_FOOD_DATABASE[0]) => {
     const newItem: FoodItem = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       name: food.name,
