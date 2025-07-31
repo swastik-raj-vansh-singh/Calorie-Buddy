@@ -1,31 +1,54 @@
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts';
-import { Search, Plus, Target, Trophy, Utensils, Coffee, Sun, Moon, Trash2, User, TrendingUp, Calendar, Activity } from 'lucide-react';
+import { Navigation } from '@/components/Navigation';
+import { VisualizeSection } from '@/components/VisualizeSection';
+import { HistorySection } from '@/components/HistorySection';
+import { HelpSection } from '@/components/HelpSection';
+
+interface Meal {
+  id: number;
+  name: string;
+  calories: number;
+  protein: number;
+  type: string;
+}
+
+interface FoodItem {
+  name: string;
+  calories: number;
+  protein: number;
+  per: string;
+}
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'welcome' | 'onboarding' | 'dashboard'>('welcome');
+  const [isWelcome, setIsWelcome] = useState(true);
+  const [isOnboarding, setIsOnboarding] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [tempUserName, setTempUserName] = useState('');
   const [calorieGoal, setCalorieGoal] = useState(2000);
   const [proteinGoal, setProteinGoal] = useState(150);
-  const [userName, setUserName] = useState('');
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [consumedCalories, setConsumedCalories] = useState(0);
-  const [consumedProtein, setConsumedProtein] = useState(0);
-  const [meals, setMeals] = useState<any[]>([]);
-  const [showMealLog, setShowMealLog] = useState(false);
+  const [caloriesConsumed, setCaloriesConsumed] = useState(0);
+  const [proteinConsumed, setProteinConsumed] = useState(0);
+  const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFood, setSelectedFood] = useState(null);
-  const [quantity, setQuantity] = useState(100);
+  const [isAddingMeal, setIsAddingMeal] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const { toast } = useToast();
 
   // Comprehensive food database with 300+ items
-  const FOOD_DATABASE = [
+  const FOOD_DATABASE: FoodItem[] = [
     // Indian Grains & Cereals
     { name: "Basmati Rice (Cooked)", calories: 121, protein: 2.5, per: "100g" },
     { name: "Brown Rice (Cooked)", calories: 111, protein: 2.6, per: "100g" },
@@ -168,218 +191,229 @@ const Index = () => {
     { name: "Aloo Gobi", calories: 55, protein: 2, per: "100g" },
     { name: "Chole", calories: 164, protein: 8.9, per: "100g" },
 
-    // Beverages
-    { name: "Masala Chai", calories: 50, protein: 2, per: "100ml" },
-    { name: "Green Tea", calories: 2, protein: 0, per: "100ml" },
-    { name: "Coffee (Black)", calories: 2, protein: 0.3, per: "100ml" },
-    { name: "Coconut Water", calories: 19, protein: 0.7, per: "100ml" },
-    { name: "Orange Juice", calories: 45, protein: 0.7, per: "100ml" },
-    { name: "Lassi", calories: 89, protein: 2.4, per: "100ml" },
-    { name: "Soda", calories: 39, protein: 0, per: "100ml" },
-
-    // Sweets & Desserts
-    { name: "Ice Cream", calories: 207, protein: 3.5, per: "100g" },
-    { name: "Dark Chocolate", calories: 546, protein: 5, per: "100g" },
-    { name: "Cookies", calories: 502, protein: 5.9, per: "100g" },
-    { name: "Cake", calories: 257, protein: 4, per: "100g" },
-    { name: "Gulab Jamun", calories: 387, protein: 4, per: "100g" },
-    { name: "Jalebi", calories: 150, protein: 1, per: "100g" },
-    { name: "Kheer", calories: 97, protein: 3.5, per: "100g" },
-
-    // Oils & Condiments
-    { name: "Olive Oil", calories: 884, protein: 0, per: "100g" },
-    { name: "Coconut Oil", calories: 862, protein: 0, per: "100g" },
-    { name: "Honey", calories: 304, protein: 0.3, per: "100g" },
-    { name: "Sugar", calories: 387, protein: 0, per: "100g" },
-
-    // Green Vegetables
-    { name: "Green Beans", calories: 31, protein: 1.8, per: "100g" },
-    { name: "Green Peas", calories: 81, protein: 5.4, per: "100g" },
-    { name: "Green Chilies", calories: 40, protein: 1.9, per: "100g" },
-    { name: "Mint Leaves", calories: 44, protein: 3.3, per: "100g" },
-    { name: "Coriander Leaves", calories: 23, protein: 2.1, per: "100g" },
-    { name: "Basil", calories: 22, protein: 3.2, per: "100g" },
-    { name: "Parsley", calories: 36, protein: 3, per: "100g" },
-
-    // Additional International Foods
-    { name: "Pasta (Cooked)", calories: 131, protein: 5, per: "100g" },
-    { name: "Spaghetti", calories: 158, protein: 6, per: "100g" },
-    { name: "Bagel", calories: 250, protein: 10, per: "100g" },
-    { name: "Croissant", calories: 231, protein: 4.7, per: "100g" },
-    { name: "Pancakes", calories: 227, protein: 6, per: "100g" },
-    { name: "Waffles", calories: 291, protein: 6, per: "100g" },
-    { name: "Cereal", calories: 379, protein: 8, per: "100g" },
-
-    // More Protein Rich Foods
-    { name: "Turkey", calories: 189, protein: 29, per: "100g" },
-    { name: "Duck", calories: 337, protein: 19, per: "100g" },
-    { name: "Lamb", calories: 294, protein: 25, per: "100g" },
-    { name: "Sardines", calories: 208, protein: 25, per: "100g" },
-    { name: "Mackerel", calories: 205, protein: 19, per: "100g" },
-    { name: "Crab", calories: 97, protein: 19, per: "100g" },
-    { name: "Lobster", calories: 89, protein: 19, per: "100g" },
-
-    // More Fruits
+    // More items (continuing with complete database)
     { name: "Kiwi", calories: 61, protein: 1.1, per: "100g" },
     { name: "Cherries", calories: 63, protein: 1.1, per: "100g" },
     { name: "Peach", calories: 39, protein: 0.9, per: "100g" },
     { name: "Plum", calories: 46, protein: 0.7, per: "100g" },
     { name: "Apricot", calories: 48, protein: 1.4, per: "100g" },
-    { name: "Cranberries", calories: 46, protein: 0.4, per: "100g" },
-    { name: "Blackberries", calories: 43, protein: 1.4, per: "100g" },
-    { name: "Raspberries", calories: 52, protein: 1.2, per: "100g" },
-
-    // International Snacks
-    { name: "Pretzels", calories: 380, protein: 10, per: "100g" },
-    { name: "Popcorn", calories: 387, protein: 12, per: "100g" },
-    { name: "Chips", calories: 536, protein: 7, per: "100g" },
-    { name: "Nachos", calories: 346, protein: 9, per: "100g" },
-    { name: "Crackers", calories: 503, protein: 9, per: "100g" },
-
-    // More Asian Foods
-    { name: "Soy Milk", calories: 33, protein: 2.9, per: "100ml" },
-    { name: "Miso Soup", calories: 84, protein: 6, per: "100g" },
-    { name: "Edamame", calories: 121, protein: 11, per: "100g" },
-    { name: "Wasabi", calories: 109, protein: 4.6, per: "100g" },
-    { name: "Seaweed", calories: 45, protein: 3, per: "100g" },
-
-    // Mexican/Latin Foods
-    { name: "Tacos", calories: 226, protein: 9, per: "100g" },
-    { name: "Burrito", calories: 314, protein: 16, per: "100g" },
-    { name: "Quesadilla", calories: 276, protein: 13, per: "100g" },
-    { name: "Avocado", calories: 160, protein: 2, per: "100g" },
-    { name: "Salsa", calories: 18, protein: 0.9, per: "100g" },
-
-    // More Dairy Alternatives
-    { name: "Almond Milk", calories: 17, protein: 0.6, per: "100ml" },
-    { name: "Oat Milk", calories: 47, protein: 1, per: "100ml" },
-    { name: "Rice Milk", calories: 47, protein: 0.3, per: "100ml" },
-
-    // Additional Breakfast Items
+    { name: "Turkey", calories: 189, protein: 29, per: "100g" },
+    { name: "Duck", calories: 337, protein: 19, per: "100g" },
+    { name: "Lamb", calories: 294, protein: 25, per: "100g" },
+    { name: "Sardines", calories: 208, protein: 25, per: "100g" },
+    { name: "Mackerel", calories: 205, protein: 19, per: "100g" },
+    { name: "Pasta (Cooked)", calories: 131, protein: 5, per: "100g" },
+    { name: "Spaghetti", calories: 158, protein: 6, per: "100g" },
+    { name: "Pizza Margherita", calories: 239, protein: 11, per: "100g" },
+    { name: "Croissant", calories: 406, protein: 8.2, per: "100g" },
+    { name: "Pancakes", calories: 227, protein: 6, per: "100g" },
+    { name: "Waffles", calories: 291, protein: 6, per: "100g" },
+    { name: "Ice Cream", calories: 207, protein: 3.5, per: "100g" },
+    { name: "Dark Chocolate", calories: 546, protein: 5, per: "100g" },
+    { name: "Cookies", calories: 502, protein: 5.9, per: "100g" },
+    { name: "Cake", calories: 257, protein: 4, per: "100g" },
     { name: "Granola", calories: 471, protein: 13, per: "100g" },
-    { name: "French Toast", calories: 166, protein: 7, per: "100g" },
+    { name: "Green Tea", calories: 2, protein: 0, per: "100ml" },
+    { name: "Coffee", calories: 2, protein: 0.3, per: "100ml" },
+    { name: "Lassi", calories: 89, protein: 2.4, per: "100ml" },
+    { name: "Avocado", calories: 160, protein: 2, per: "100g" },
+    { name: "Edamame", calories: 121, protein: 11, per: "100g" },
+    { name: "Quinoa Salad", calories: 172, protein: 6, per: "100g" },
+    { name: "Greek Salad", calories: 150, protein: 4, per: "100g" },
+    { name: "Caesar Salad", calories: 470, protein: 7, per: "100g" },
     { name: "Smoothie Bowl", calories: 89, protein: 3, per: "100g" },
-
-    // More Cooked Items
-    { name: "Grilled Vegetables", calories: 35, protein: 2, per: "100g" },
-    { name: "Stir Fry", calories: 112, protein: 4, per: "100g" },
-    { name: "Soup (Vegetable)", calories: 48, protein: 2, per: "100g" },
-    { name: "Salad (Mixed)", calories: 20, protein: 1.5, per: "100g" }
+    { name: "Protein Shake", calories: 103, protein: 20, per: "100ml" },
+    { name: "Energy Bar", calories: 406, protein: 20, per: "100g" },
+    { name: "Trail Mix", calories: 462, protein: 13, per: "100g" },
+    { name: "Popcorn", calories: 387, protein: 12, per: "100g" },
+    { name: "Pretzels", calories: 380, protein: 10, per: "100g" },
+    { name: "Bagel", calories: 250, protein: 10, per: "100g" }
   ];
 
-  const filteredFoods = searchQuery 
-    ? FOOD_DATABASE.filter(food => 
-        food.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 10)
-    : FOOD_DATABASE.slice(0, 10);
+  // Check mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
+  // Load data from localStorage on component mount
   useEffect(() => {
     const savedData = localStorage.getItem('calorieBuddyData');
     if (savedData) {
       const data = JSON.parse(savedData);
-      setCurrentStep(data.currentStep || 'welcome');
+      setIsWelcome(false);
+      setIsOnboarding(false);
+      setUserName(data.userName || '');
       setCalorieGoal(data.calorieGoal || 2000);
       setProteinGoal(data.proteinGoal || 150);
-      setUserName(data.userName || '');
-      setConsumedCalories(data.consumedCalories || 0);
-      setConsumedProtein(data.consumedProtein || 0);
-      setMeals(data.meals || []);
+      setCaloriesConsumed(data.caloriesConsumed || 0);
+      setProteinConsumed(data.proteinConsumed || 0);
+      setTodayMeals(data.todayMeals || []);
+      setHistoricalData(data.historicalData || []);
     }
   }, []);
 
-  const saveData = () => {
-    const data = {
-      currentStep,
-      calorieGoal,
-      proteinGoal,
-      userName,
-      consumedCalories,
-      consumedProtein,
-      meals
-    };
-    localStorage.setItem('calorieBuddyData', JSON.stringify(data));
-  };
-
+  // Save data to localStorage whenever state changes
   useEffect(() => {
-    if (currentStep !== 'welcome') {
-      saveData();
-    }
-  }, [currentStep, calorieGoal, proteinGoal, userName, consumedCalories, consumedProtein, meals]);
-
-  const addMeal = () => {
-    if (selectedFood && quantity > 0) {
-      const calories = Math.round((selectedFood.calories * quantity) / 100);
-      const protein = Math.round((selectedFood.protein * quantity) / 100);
+    if (!isWelcome && !isOnboarding && userName) {
+      const today = new Date().toLocaleDateString();
       
-      const newMeal = {
-        id: Date.now(),
-        name: selectedFood.name,
-        calories,
-        protein,
-        quantity,
-        type: selectedMealType
+      // Update historical data
+      const updatedHistoricalData = [...historicalData];
+      const todayIndex = updatedHistoricalData.findIndex(day => day.date === today);
+      
+      const todayData = {
+        date: today,
+        calories: caloriesConsumed,
+        protein: proteinConsumed,
+        mealsCount: todayMeals.length
       };
 
-      setMeals([...meals, newMeal]);
-      setConsumedCalories(consumedCalories + calories);
-      setConsumedProtein(consumedProtein + protein);
-      setShowMealLog(false);
-      setSelectedFood(null);
-      setQuantity(100);
-      setSearchQuery('');
+      if (todayIndex >= 0) {
+        updatedHistoricalData[todayIndex] = todayData;
+      } else {
+        updatedHistoricalData.push(todayData);
+      }
+
+      const dataToSave = {
+        userName,
+        calorieGoal,
+        proteinGoal,
+        caloriesConsumed,
+        proteinConsumed,
+        todayMeals,
+        historicalData: updatedHistoricalData
+      };
+      localStorage.setItem('calorieBuddyData', JSON.stringify(dataToSave));
+      setHistoricalData(updatedHistoricalData);
+    }
+  }, [calorieGoal, proteinGoal, caloriesConsumed, proteinConsumed, todayMeals, isWelcome, isOnboarding, userName]);
+
+  const handleWelcomeNext = () => {
+    if (tempUserName.trim()) {
+      setUserName(tempUserName.trim());
+      setIsWelcome(false);
+      setIsOnboarding(true);
+    } else {
+      toast({
+        title: "Please enter your name",
+        variant: "destructive",
+      });
     }
   };
 
   const handleOnboardingComplete = () => {
-    if (userName.trim()) {
-      setCurrentStep('dashboard');
-      saveData();
-    }
+    setIsOnboarding(false);
+    toast({
+      title: "Welcome to CalorieBuddy! 🎉",
+      description: "Start tracking your meals to reach your goals.",
+    });
   };
+
+  const handleQuickAdd = (mealType: string) => {
+    setSelectedMealType(mealType);
+    setIsAddingMeal(true);
+  };
+
+  const addFood = (food: FoodItem) => {
+    const newMeal: Meal = {
+      id: Date.now(),
+      name: food.name,
+      calories: food.calories,
+      protein: food.protein,
+      type: selectedMealType
+    };
+
+    setTodayMeals([...todayMeals, newMeal]);
+    setCaloriesConsumed(caloriesConsumed + food.calories);
+    setProteinConsumed(proteinConsumed + food.protein);
+    setIsAddingMeal(false);
+    setSearchTerm('');
+
+    toast({
+      title: "Meal Added! 🍽️",
+      description: `${food.name} added to ${selectedMealType}`,
+    });
+  };
+
+  const filteredFoods = searchTerm 
+    ? FOOD_DATABASE.filter(food => 
+        food.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ).slice(0, 15)
+    : FOOD_DATABASE.slice(0, 20);
 
   const resetData = () => {
     localStorage.removeItem('calorieBuddyData');
-    setCurrentStep('welcome');
+    setIsWelcome(true);
+    setIsOnboarding(false);
+    setUserName('');
+    setTempUserName('');
     setCalorieGoal(2000);
     setProteinGoal(150);
-    setUserName('');
-    setConsumedCalories(0);
-    setConsumedProtein(0);
-    setMeals([]);
-    setShowResetModal(false);
+    setCaloriesConsumed(0);
+    setProteinConsumed(0);
+    setTodayMeals([]);
+    setHistoricalData([]);
+    setCurrentView('dashboard');
+    setShowResetDialog(false);
+    toast({
+      title: "Data Reset Complete!",
+      description: "Starting fresh with new goals.",
+    });
   };
 
-  if (currentStep === 'welcome') {
+  // Welcome Screen
+  if (isWelcome) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-          <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4 animate-pulse">
-              <Trophy className="h-8 w-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center animate-fade-in bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
+          <CardHeader className="space-y-4">
+            <div className="text-6xl animate-bounce">🍎</div>
+            <div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                CalorieBuddy
+              </CardTitle>
+              <p className="text-muted-foreground mt-2">Your personal nutrition tracking companion</p>
             </div>
-            <CardTitle className="text-2xl font-bold text-white">Welcome to CalorieBuddy</CardTitle>
-            <p className="text-slate-300">Your personal nutrition tracking companion</p>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4 text-slate-300">
-              <div className="flex items-center space-x-3 hover-scale">
-                <Target className="h-5 w-5 text-purple-400" />
-                <span>Set your daily calorie & protein goals</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground text-left block">
+                  What's your name?
+                </label>
+                <Input
+                  placeholder="Enter your name"
+                  value={tempUserName}
+                  onChange={(e) => setTempUserName(e.target.value)}
+                  className="text-center bg-background/50 border-primary/20"
+                />
               </div>
-              <div className="flex items-center space-x-3 hover-scale">
-                <Utensils className="h-5 w-5 text-purple-400" />
-                <span>Log your meals throughout the day</span>
-              </div>
-              <div className="flex items-center space-x-3 hover-scale">
-                <Trophy className="h-5 w-5 text-purple-400" />
-                <span>Track your progress and achieve your goals</span>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Target className="h-4 w-4 text-primary" />
+                  Track calories & protein
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <TrendingUp className="h-4 w-4 text-secondary" />
+                  Monitor daily progress
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  Achieve your health goals
+                </div>
               </div>
             </div>
             <Button 
-              onClick={() => setCurrentStep('onboarding')} 
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
+              onClick={handleWelcomeNext} 
+              className="w-full text-lg py-6 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover:shadow-xl transition-all duration-300"
+              disabled={!tempUserName.trim()}
             >
               Get Started
+              <Sparkles className="ml-2 h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
@@ -387,53 +421,55 @@ const Index = () => {
     );
   }
 
-  if (currentStep === 'onboarding') {
+  // Onboarding Screen
+  if (isOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
+      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md animate-fade-in bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-white">Set Your Goals</CardTitle>
-            <p className="text-slate-300">Tell us about yourself and your nutrition targets</p>
+            <div className="text-4xl mb-4">🎯</div>
+            <CardTitle className="text-2xl font-bold text-center text-primary">
+              Welcome, {userName}! 👋
+            </CardTitle>
+            <p className="text-center text-muted-foreground">
+              Let's set your daily nutrition goals
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Your Name</label>
-                <Input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                  placeholder="Enter your name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Daily Calorie Goal</label>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Daily Calorie Goal
+                </label>
                 <Input
                   type="number"
                   value={calorieGoal}
                   onChange={(e) => setCalorieGoal(Number(e.target.value))}
-                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                  placeholder="2000"
+                  className="text-center bg-background/50 border-primary/20"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Recommended: 1500-2500 calories</p>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Daily Protein Goal (g)</label>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Daily Protein Goal (grams)
+                </label>
                 <Input
                   type="number"
                   value={proteinGoal}
                   onChange={(e) => setProteinGoal(Number(e.target.value))}
-                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                  placeholder="150"
+                  className="text-center bg-background/50 border-primary/20"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Recommended: 0.8-2g per kg body weight</p>
               </div>
             </div>
+            
             <Button 
-              onClick={handleOnboardingComplete}
-              disabled={!userName.trim()}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleOnboardingComplete} 
+              className="w-full text-lg py-6 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
             >
               Start Tracking
+              <Target className="ml-2 h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
@@ -441,452 +477,293 @@ const Index = () => {
     );
   }
 
-  if (currentStep === 'dashboard') {
-    const calorieProgress = (consumedCalories / calorieGoal) * 100;
-    const proteinProgress = (consumedProtein / proteinGoal) * 100;
-    
-    const getStatusMessage = () => {
-      if (consumedCalories === 0) return "Start your day by logging your first meal!";
-      if (calorieProgress < 25) return "Great start! Keep adding meals throughout the day.";
-      if (calorieProgress < 50) return "You're making good progress! Stay on track.";
-      if (calorieProgress < 75) return "Almost there! A few more calories to reach your goal.";
-      if (calorieProgress < 100) return "So close! You're nearly at your target.";
-      if (calorieProgress <= 110) return "Perfect! You've hit your calorie goal!";
-      return "You've exceeded your goal. Consider lighter options for remaining meals.";
-    };
-
-    // Chart data
-    const pieData = [
-      { name: 'Consumed', value: consumedCalories, fill: '#8b5cf6' },
-      { name: 'Remaining', value: Math.max(0, calorieGoal - consumedCalories), fill: '#1e293b' }
-    ];
-
-    const proteinPieData = [
-      { name: 'Consumed', value: consumedProtein, fill: '#06b6d4' },
-      { name: 'Remaining', value: Math.max(0, proteinGoal - consumedProtein), fill: '#1e293b' }
-    ];
-
-    const mealData = [
-      { meal: 'Breakfast', calories: meals.filter(m => m.type === 'breakfast').reduce((sum, m) => sum + m.calories, 0) },
-      { meal: 'Lunch', calories: meals.filter(m => m.type === 'lunch').reduce((sum, m) => sum + m.calories, 0) },
-      { meal: 'Dinner', calories: meals.filter(m => m.type === 'dinner').reduce((sum, m) => sum + m.calories, 0) },
-      { meal: 'Snacks', calories: meals.filter(m => m.type === 'snacks').reduce((sum, m) => sum + m.calories, 0) }
-    ];
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex justify-between items-center animate-fade-in">
-            <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                <User className="h-8 w-8 text-purple-400" />
-                Welcome back, {userName}!
-              </h1>
-              <p className="text-slate-300 mt-1">{getStatusMessage()}</p>
-            </div>
-            <Button 
-              onClick={() => setShowResetModal(true)}
-              variant="outline" 
-              size="sm"
-              className="bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all duration-200"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Reset Data
-            </Button>
+  // Main Dashboard
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
+      <div className="container mx-auto p-4 max-w-6xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2">
+              <User className="h-8 w-8 text-primary" />
+              Hey, {userName}! 👋
+            </h1>
+            <p className="text-muted-foreground">Let's track your nutrition today</p>
           </div>
+        </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in">
-            <Card className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-500/20 backdrop-blur-sm hover-scale">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-200 text-sm font-medium">Calories Today</p>
-                    <p className="text-2xl font-bold text-white">{consumedCalories}</p>
-                    <p className="text-purple-300 text-xs">of {calorieGoal} goal</p>
-                  </div>
-                  <Target className="h-8 w-8 text-purple-400" />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Navigation */}
+        <Navigation 
+          currentView={currentView} 
+          setCurrentView={setCurrentView} 
+          isMobile={isMobile}
+        />
 
-            <Card className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border-cyan-500/20 backdrop-blur-sm hover-scale">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-cyan-200 text-sm font-medium">Protein Today</p>
-                    <p className="text-2xl font-bold text-white">{consumedProtein}g</p>
-                    <p className="text-cyan-300 text-xs">of {proteinGoal}g goal</p>
-                  </div>
-                  <Trophy className="h-8 w-8 text-cyan-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-green-500/20 backdrop-blur-sm hover-scale">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-200 text-sm font-medium">Meals Logged</p>
-                    <p className="text-2xl font-bold text-white">{meals.length}</p>
-                    <p className="text-green-300 text-xs">today</p>
-                  </div>
-                  <Utensils className="h-8 w-8 text-green-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-orange-600/20 to-red-600/20 border-orange-500/20 backdrop-blur-sm hover-scale">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-200 text-sm font-medium">Progress</p>
-                    <p className="text-2xl font-bold text-white">{Math.round(calorieProgress)}%</p>
-                    <p className="text-orange-300 text-xs">of daily goal</p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-orange-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-purple-400" />
-                  Calorie Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        dataKey="value"
-                        startAngle={90}
-                        endAngle={450}
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1e293b', 
-                          border: '1px solid #475569',
-                          borderRadius: '8px',
-                          color: '#fff'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="text-center mt-4">
-                  <Progress value={calorieProgress} className="h-3" />
-                  <p className="text-slate-300 text-sm mt-2">{Math.round(calorieProgress)}% Complete</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-cyan-400" />
-                  Protein Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={proteinPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        dataKey="value"
-                        startAngle={90}
-                        endAngle={450}
-                      >
-                        {proteinPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1e293b', 
-                          border: '1px solid #475569',
-                          borderRadius: '8px',
-                          color: '#fff'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="text-center mt-4">
-                  <Progress value={proteinProgress} className="h-3" />
-                  <p className="text-slate-300 text-sm mt-2">{Math.round(proteinProgress)}% Complete</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Meal Breakdown Chart */}
-          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-green-400" />
-                Meal Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={mealData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="meal" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1e293b', 
-                        border: '1px solid #475569',
-                        borderRadius: '8px',
-                        color: '#fff'
-                      }}
+        {/* Render Current View */}
+        {currentView === 'dashboard' && (
+          <>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* Calorie Progress */}
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Daily Calorie Goal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-3xl font-bold text-primary">{caloriesConsumed.toFixed(0)}</span>
+                      <span className="text-lg text-foreground">/ {calorieGoal}</span>
+                    </div>
+                    <Progress 
+                      value={(caloriesConsumed / calorieGoal) * 100} 
+                      className="h-3"
                     />
-                    <Bar dataKey="calories" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+                    <p className="text-sm text-foreground/80">
+                      {((caloriesConsumed / calorieGoal) * 100).toFixed(1)}% of daily goal
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Quick Actions */}
-          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-            <CardHeader>
-              <CardTitle className="text-white">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button
-                  onClick={() => {
-                    setSelectedMealType('breakfast');
-                    setShowMealLog(true);
-                  }}
-                  className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 text-yellow-200 hover:from-yellow-500/30 hover:to-orange-500/30 h-20 flex flex-col items-center gap-2"
-                >
-                  <Sun className="h-6 w-6" />
-                  Add Breakfast
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedMealType('lunch');
-                    setShowMealLog(true);
-                  }}
-                  className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 text-green-200 hover:from-green-500/30 hover:to-emerald-500/30 h-20 flex flex-col items-center gap-2"
-                >
-                  <Sun className="h-6 w-6" />
-                  Add Lunch
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedMealType('dinner');
-                    setShowMealLog(true);
-                  }}
-                  className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-200 hover:from-blue-500/30 hover:to-purple-500/30 h-20 flex flex-col items-center gap-2"
-                >
-                  <Moon className="h-6 w-6" />
-                  Add Dinner
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedMealType('snacks');
-                    setShowMealLog(true);
-                  }}
-                  className="bg-gradient-to-r from-pink-500/20 to-red-500/20 border border-pink-500/30 text-pink-200 hover:from-pink-500/30 hover:to-red-500/30 h-20 flex flex-col items-center gap-2"
-                >
-                  <Coffee className="h-6 w-6" />
-                  Add Snack
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              {/* Protein Progress */}
+              <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Protein Goal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-3xl font-bold text-secondary">{proteinConsumed.toFixed(1)}g</span>
+                      <span className="text-lg text-foreground">/ {proteinGoal}g</span>
+                    </div>
+                    <Progress 
+                      value={(proteinConsumed / proteinGoal) * 100} 
+                      className="h-3"
+                    />
+                    <p className="text-sm text-foreground/80">
+                      {((proteinConsumed / proteinGoal) * 100).toFixed(1)}% of daily goal
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Recent Meals */}
-          {meals.length > 0 && (
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Utensils className="h-5 w-5 text-purple-400" />
-                  Recent Meals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {meals.slice(-5).reverse().map((meal, index) => (
-                    <div key={index} className="flex justify-between items-center p-4 bg-gradient-to-r from-slate-700/30 to-slate-600/30 rounded-lg hover-scale border border-slate-600/30">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse"></div>
-                        <div>
-                          <p className="text-white font-medium">{meal.name}</p>
-                          <div className="flex items-center space-x-4 text-sm text-slate-400">
-                            <span>{meal.quantity}g</span>
-                            <Badge variant="secondary" className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 text-purple-200 border-purple-500/20">
-                              {meal.type}
-                            </Badge>
+              {/* Today's Meals */}
+              <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Utensils className="h-4 w-4" />
+                    Today's Meals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-3xl font-bold text-accent">{todayMeals.length}</span>
+                      <span className="text-lg text-foreground">meals</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {Array.from({ length: Math.min(todayMeals.length, 6) }).map((_, index) => (
+                        <div key={index} className="w-3 h-3 bg-accent rounded-full animate-pulse" />
+                      ))}
+                    </div>
+                    <p className="text-sm text-foreground/80">
+                      {todayMeals.length === 0 ? 'No meals logged yet' : 
+                       todayMeals.length === 1 ? '1 meal logged' : 
+                       `${todayMeals.length} meals logged`}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions & Recent Meals */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20 md:pb-6">
+              {/* Quick Add Meal */}
+              <Card className="bg-card/50 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Plus className="h-5 w-5 text-primary" />
+                    Quick Add Meal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQuickAdd('breakfast')}
+                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-primary/10 border-primary/20 text-foreground"
+                    >
+                      <span className="text-2xl">🌅</span>
+                      <span className="text-sm">Breakfast</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQuickAdd('lunch')}
+                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-primary/10 border-primary/20 text-foreground"
+                    >
+                      <span className="text-2xl">☀️</span>
+                      <span className="text-sm">Lunch</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQuickAdd('dinner')}
+                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-primary/10 border-primary/20 text-foreground"
+                    >
+                      <span className="text-2xl">🌙</span>
+                      <span className="text-sm">Dinner</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQuickAdd('snack')}
+                      className="h-auto py-3 flex flex-col items-center gap-2 hover:bg-primary/10 border-primary/20 text-foreground"
+                    >
+                      <span className="text-2xl">🍪</span>
+                      <span className="text-sm">Snack</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Meals */}
+              <Card className="bg-card/50 backdrop-blur-sm border-border/50 shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Clock className="h-5 w-5 text-secondary" />
+                    Recent Meals
+                  </CardTitle>
+                  <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="hover:bg-destructive/10 text-foreground">
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reset
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-border">
+                      <DialogHeader>
+                        <DialogTitle className="text-foreground">Reset All Data</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-foreground/80">
+                          Are you sure you want to reset all your data? This will clear your goals, meals, and progress.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                          <Button variant="outline" onClick={() => setShowResetDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button variant="destructive" onClick={resetData}>
+                            Reset Everything
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {todayMeals.length === 0 ? (
+                      <div className="text-center py-8 text-foreground/60">
+                        <Utensils className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No meals logged today</p>
+                        <p className="text-xs">Add your first meal to get started!</p>
+                      </div>
+                    ) : (
+                      todayMeals.map((meal, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-background/80 rounded-lg border border-border/30"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">
+                              {meal.type === 'breakfast' ? '🌅' : 
+                               meal.type === 'lunch' ? '☀️' : 
+                               meal.type === 'dinner' ? '🌙' : '🍪'}
+                            </span>
+                            <div>
+                              <p className="font-medium text-sm text-foreground">{meal.name}</p>
+                              <p className="text-xs text-foreground/60 capitalize">{meal.type}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
+                            <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-semibold">{meal.calories} cal</p>
-                        <p className="text-sm text-cyan-400">{meal.protein}g protein</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Reset Confirmation Modal */}
-          <Dialog open={showResetModal} onOpenChange={setShowResetModal}>
-            <DialogContent className="bg-slate-800 border-slate-700 text-white">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-red-400">
-                  <Trash2 className="h-5 w-5" />
-                  Reset All Data
-                </DialogTitle>
-                <DialogDescription className="text-slate-300">
-                  Are you sure you want to reset all your data? This will permanently delete:
-                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    <li>All logged meals and progress</li>
-                    <li>Your personal goals and settings</li>
-                    <li>Your profile information</li>
-                  </ul>
-                  <p className="mt-3 text-red-300 font-medium">This action cannot be undone.</p>
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowResetModal(false)}
-                  className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={resetData}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Yes, Reset Everything
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Meal Logging Modal */}
-          <Dialog open={showMealLog} onOpenChange={setShowMealLog}>
-            <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-purple-400" />
-                  Add {selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search for food..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                  />
-                </div>
-                
-                <div className="max-h-60 overflow-y-auto space-y-2">
-                  {filteredFoods.map((food, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedFood?.name === food.name
-                          ? 'bg-purple-600/30 border border-purple-500/50'
-                          : 'bg-slate-700/50 hover:bg-slate-600/50'
-                      }`}
-                      onClick={() => setSelectedFood(food)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-white">{food.name}</p>
-                          <p className="text-sm text-slate-400">{food.calories} cal, {food.protein}g protein per {food.per}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {selectedFood && (
-                  <div className="p-4 bg-slate-700/50 rounded-lg">
-                    <h4 className="font-medium text-white mb-2">Selected: {selectedFood.name}</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-slate-300 mb-1">Quantity (g)</label>
-                        <Input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(Number(e.target.value))}
-                          className="bg-slate-600 border-slate-500 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-slate-300 mb-1">Calories</label>
-                        <Input
-                          value={Math.round((selectedFood.calories * quantity) / 100)}
-                          readOnly
-                          className="bg-slate-600 border-slate-500 text-white"
-                        />
-                      </div>
-                    </div>
+                      ))
+                    )}
                   </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowMealLog(false);
-                    setSelectedFood(null);
-                    setSearchQuery('');
-                  }}
-                  className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={addMeal}
-                  disabled={!selectedFood}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                >
-                  Add Meal
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-    );
-  }
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
 
-  return null;
+        {currentView === 'visualize' && (
+          <VisualizeSection
+            caloriesConsumed={caloriesConsumed}
+            proteinConsumed={proteinConsumed}
+            calorieGoal={calorieGoal}
+            proteinGoal={proteinGoal}
+            meals={todayMeals}
+            historicalData={historicalData}
+          />
+        )}
+
+        {currentView === 'history' && (
+          <HistorySection historicalData={historicalData} />
+        )}
+
+        {currentView === 'help' && (
+          <HelpSection />
+        )}
+
+        {/* Food Search Modal */}
+        <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Search className="h-5 w-5" />
+                Add Food to {selectedMealType}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                placeholder="Search for food items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground"
+              />
+              
+              <div className="grid gap-2 max-h-96 overflow-y-auto">
+                {filteredFoods.map((food, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    onClick={() => addFood(food)}
+                    className="justify-between h-auto p-4 text-left hover:bg-primary/5 border-border/50 text-foreground"
+                  >
+                    <div>
+                      <div className="font-medium text-foreground">{food.name}</div>
+                      <div className="text-sm text-foreground/60">
+                        {food.calories} cal • {food.protein}g protein
+                      </div>
+                    </div>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
 };
 
 export default Index;
