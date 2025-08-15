@@ -127,31 +127,6 @@ const Index = () => {
   const getCorrectUnit = (foodName: string) => {
     const lowerName = foodName.toLowerCase();
     
-    // Pizza - show size
-    if (lowerName.includes('pizza')) {
-      return ' pizza';
-    }
-    
-    // Cheese - slices
-    if (lowerName.includes('cheese') && !lowerName.includes('cottage') && !lowerName.includes('paneer')) {
-      return ' slices';
-    }
-    
-    // Ice cream - contextual
-    if (lowerName.includes('ice cream') || lowerName.includes('icecream')) {
-      if (lowerName.includes('tub')) return ' tub';
-      if (lowerName.includes('cone')) return ' cone';
-      if (lowerName.includes('candy')) return ' candy';
-      return ' scoops';
-    }
-    
-    // Counted items
-    if (lowerName.includes('gulab jamun') || lowerName.includes('samosa') || lowerName.includes('dosa') ||
-        lowerName.includes('idli') || lowerName.includes('roti') || lowerName.includes('naan') ||
-        lowerName.includes('banana') || lowerName.includes('egg') || lowerName.includes('biscuit')) {
-      return ' pcs';
-    }
-    
     // Liquids
     if (lowerName.includes('coke') || lowerName.includes('juice') || lowerName.includes('milk') || 
         lowerName.includes('water') || lowerName.includes('coffee') || lowerName.includes('tea') ||

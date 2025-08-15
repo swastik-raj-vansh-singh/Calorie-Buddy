@@ -44,30 +44,22 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     
     try {
       const parsePrompt = `
-      You are a food quantity and calorie estimation expert.
-
-      Given this user input: "${foodDescription}".
+      The user said: "${foodDescription}".
       
-      Extract all food items and intelligently determine the correct unit for each one using real-world measurement units that people naturally use:
-
-      - For liquids (like Coke, milk, juice), use **milliliters (ml)**
-      - For general solids (like rice, bread, sabzi), use **grams (g)**
-      - For spices or sugar/oil, use **teaspoons (tsp)** or **tablespoons (tbsp)**
-      - For food items that are naturally counted (like Gulab Jamun, eggs, bananas), use **quantity (pieces)**
-      - For pizza, use **size-based units**: small/medium/large pizza or slices
-      - For cheese, use **cheese slice(s)**
-      - For ice cream, determine if it's a **tub**, **cone**, or **candy** based on context
-      - For Indian or cultural dishes (like samosa, dosa, chole bhature), use **quantity (pieces)**
-      - For bread items (like roti, naan), use **quantity (pieces)**
-
-      Check if quantity is already mentioned in the description. If yes, extract the amount and set hasQuantity to true.
+      Break this down into individual food components.
+      For each food item:
+      - If it's a liquid (e.g., Coke, juice, milk, water), classify as "liquid" with unit "ml"
+      - If it's a solid (e.g., pizza, rice, bread), classify as "solid" with unit "g"  
+      - If it's a condiment/spice (e.g., sugar, oil, salt), classify as "spice" with unit "tsp"
+      
+      Check if quantity is already mentioned in the description. If yes, extract the weight and set hasQuantity to true.
       
       Return ONLY a JSON array in this exact format:
       [
         {
           "name": "food name",
-          "type": "liquid|solid|spice|counted|sized",
-          "unit": "ml|g|tsp|pieces|slices|size",
+          "type": "solid|liquid|spice",
+          "unit": "g|ml|tsp",
           "weight": <number if mentioned, otherwise null>,
           "hasQuantity": <true if quantity mentioned, false otherwise>
         }
@@ -105,18 +97,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         if (item.hasQuantity && item.weight) {
           weights[item.name] = item.weight;
         } else {
-          // Set intelligent defaults based on unit type
-          if (item.unit === 'ml') {
-            weights[item.name] = 250; // ml for liquids
-          } else if (item.unit === 'tsp') {
-            weights[item.name] = 5; // teaspoons for spices
-          } else if (item.unit === 'pieces' || item.unit === 'slices') {
-            weights[item.name] = 1; // 1 piece/slice as default
-          } else if (item.unit === 'size') {
-            weights[item.name] = 1; // 1 size (medium) as default
-          } else {
-            weights[item.name] = 100; // grams for solids
-          }
+          weights[item.name] = item.type === 'liquid' ? 250 : item.type === 'spice' ? 5 : 100;
         }
       });
       setItemWeights(weights);
@@ -227,30 +208,15 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                       {!item.hasQuantity && (
                         <div className="space-y-2">
                           <label className="text-sm text-muted-foreground">
-                            Enter quantity ({item.unit === 'size' ? 'small/medium/large' : item.unit}):
+                            Enter quantity ({item.unit}):
                           </label>
-                          {item.unit === 'size' ? (
-                            <select 
-                              value={itemWeights[item.name] === 1 ? 'medium' : itemWeights[item.name] === 0.7 ? 'small' : 'large'}
-                              onChange={(e) => {
-                                const sizeValue = e.target.value === 'small' ? 0.7 : e.target.value === 'large' ? 1.5 : 1;
-                                handleWeightChange(item.name, sizeValue);
-                              }}
-                              className="w-32 px-3 py-2 border border-border rounded-md bg-background"
-                            >
-                              <option value="small">Small</option>
-                              <option value="medium">Medium</option>
-                              <option value="large">Large</option>
-                            </select>
-                          ) : (
-                            <Input
-                              type="number"
-                              value={itemWeights[item.name] || ''}
-                              onChange={(e) => handleWeightChange(item.name, Number(e.target.value))}
-                              placeholder={`e.g., ${item.unit === 'ml' ? '250' : item.unit === 'tsp' ? '5' : item.unit === 'pieces' || item.unit === 'slices' ? '1' : '100'}`}
-                              className="w-32"
-                            />
-                          )}
+                          <Input
+                            type="number"
+                            value={itemWeights[item.name] || ''}
+                            onChange={(e) => handleWeightChange(item.name, Number(e.target.value))}
+                            placeholder={`e.g., ${item.type === 'liquid' ? '250' : item.type === 'spice' ? '5' : '100'}`}
+                            className="w-32"
+                          />
                         </div>
                       )}
                       
