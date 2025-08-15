@@ -5,13 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navigation } from '@/components/Navigation';
 import { VisualizeSection } from '@/components/VisualizeSection';
 import { HistorySection } from '@/components/HistorySection';
 import { HelpSection } from '@/components/HelpSection';
+import { WeightCalculator } from '@/components/WeightCalculator';
+import { EXPANDED_FOOD_DATABASE, FoodItem } from '@/data/foodDatabase';
 
 interface Meal {
   id: number;
@@ -19,13 +21,11 @@ interface Meal {
   calories: number;
   protein: number;
   type: string;
-}
-
-interface FoodItem {
-  name: string;
-  calories: number;
-  protein: number;
-  per: string;
+  weight?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+  aiEnhanced?: boolean;
 }
 
 const Index = () => {
@@ -45,190 +45,12 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [showWeightCalculator, setShowWeightCalculator] = useState(false);
   const { toast } = useToast();
 
-  // Comprehensive food database with 300+ items
-  const FOOD_DATABASE: FoodItem[] = [
-    // Indian Grains & Cereals
-    { name: "Basmati Rice (Cooked)", calories: 121, protein: 2.5, per: "100g" },
-    { name: "Brown Rice (Cooked)", calories: 111, protein: 2.6, per: "100g" },
-    { name: "Quinoa (Cooked)", calories: 120, protein: 4.4, per: "100g" },
-    { name: "Roti (Wheat)", calories: 104, protein: 3.1, per: "100g" },
-    { name: "Chapati", calories: 120, protein: 3.5, per: "100g" },
-    { name: "Naan", calories: 262, protein: 9, per: "100g" },
-    { name: "Paratha (Plain)", calories: 320, protein: 8, per: "100g" },
-    { name: "Dosa (Plain)", calories: 168, protein: 4, per: "100g" },
-    { name: "Idli", calories: 39, protein: 2, per: "100g" },
-    { name: "Poha", calories: 76, protein: 2.6, per: "100g" },
-    { name: "Upma", calories: 109, protein: 3.2, per: "100g" },
-    { name: "Bread (White)", calories: 265, protein: 9, per: "100g" },
-    { name: "Bread (Brown)", calories: 247, protein: 13, per: "100g" },
-    { name: "Oats", calories: 389, protein: 17, per: "100g" },
-    { name: "Cornflakes", calories: 378, protein: 7.5, per: "100g" },
-
-    // Indian Vegetables
-    { name: "Aloo (Potato)", calories: 77, protein: 2, per: "100g" },
-    { name: "Gobi (Cauliflower)", calories: 25, protein: 1.9, per: "100g" },
-    { name: "Baingan (Eggplant)", calories: 25, protein: 1, per: "100g" },
-    { name: "Bhindi (Lady Finger)", calories: 33, protein: 1.9, per: "100g" },
-    { name: "Palak (Spinach)", calories: 23, protein: 2.9, per: "100g" },
-    { name: "Methi (Fenugreek)", calories: 49, protein: 4.4, per: "100g" },
-    { name: "Karela (Bitter Gourd)", calories: 17, protein: 1, per: "100g" },
-    { name: "Lauki (Bottle Gourd)", calories: 14, protein: 0.6, per: "100g" },
-    { name: "Tori (Ridge Gourd)", calories: 20, protein: 1.2, per: "100g" },
-    { name: "Shimla Mirch (Bell Pepper)", calories: 31, protein: 1, per: "100g" },
-    { name: "Pyaz (Onion)", calories: 40, protein: 1.1, per: "100g" },
-    { name: "Tamatar (Tomato)", calories: 18, protein: 0.9, per: "100g" },
-    { name: "Gajar (Carrot)", calories: 41, protein: 0.9, per: "100g" },
-    { name: "Muli (Radish)", calories: 16, protein: 0.7, per: "100g" },
-
-    // International Vegetables
-    { name: "Broccoli", calories: 34, protein: 2.8, per: "100g" },
-    { name: "Brussels Sprouts", calories: 43, protein: 3.4, per: "100g" },
-    { name: "Cabbage", calories: 25, protein: 1.3, per: "100g" },
-    { name: "Lettuce", calories: 15, protein: 1.4, per: "100g" },
-    { name: "Cucumber", calories: 16, protein: 0.7, per: "100g" },
-    { name: "Zucchini", calories: 17, protein: 1.2, per: "100g" },
-    { name: "Asparagus", calories: 20, protein: 2.2, per: "100g" },
-    { name: "Celery", calories: 14, protein: 0.7, per: "100g" },
-    { name: "Sweet Potato", calories: 86, protein: 1.6, per: "100g" },
-    { name: "Mushrooms", calories: 22, protein: 3.1, per: "100g" },
-    { name: "Kale", calories: 49, protein: 4.3, per: "100g" },
-
-    // Fruits
-    { name: "Mango", calories: 60, protein: 0.8, per: "100g" },
-    { name: "Banana", calories: 89, protein: 1.1, per: "100g" },
-    { name: "Apple", calories: 52, protein: 0.3, per: "100g" },
-    { name: "Orange", calories: 47, protein: 0.9, per: "100g" },
-    { name: "Grapes", calories: 62, protein: 0.6, per: "100g" },
-    { name: "Papaya", calories: 43, protein: 0.5, per: "100g" },
-    { name: "Pineapple", calories: 50, protein: 0.5, per: "100g" },
-    { name: "Guava", calories: 68, protein: 2.6, per: "100g" },
-    { name: "Watermelon", calories: 30, protein: 0.6, per: "100g" },
-    { name: "Strawberries", calories: 32, protein: 0.7, per: "100g" },
-    { name: "Blueberries", calories: 57, protein: 0.7, per: "100g" },
-    { name: "Pomegranate", calories: 83, protein: 1.7, per: "100g" },
-    { name: "Coconut", calories: 354, protein: 3.3, per: "100g" },
-    { name: "Dates", calories: 277, protein: 1.8, per: "100g" },
-
-    // Legumes & Pulses
-    { name: "Dal (Lentils)", calories: 116, protein: 9, per: "100g" },
-    { name: "Moong Dal", calories: 347, protein: 24, per: "100g" },
-    { name: "Chana Dal", calories: 364, protein: 22, per: "100g" },
-    { name: "Toor Dal", calories: 343, protein: 22, per: "100g" },
-    { name: "Urad Dal", calories: 341, protein: 25, per: "100g" },
-    { name: "Rajma (Kidney Beans)", calories: 127, protein: 8.7, per: "100g" },
-    { name: "Chickpeas", calories: 164, protein: 8.9, per: "100g" },
-    { name: "Black Beans", calories: 132, protein: 8.9, per: "100g" },
-    { name: "Hummus", calories: 166, protein: 8, per: "100g" },
-
-    // Protein Sources
-    { name: "Chicken Breast", calories: 165, protein: 31, per: "100g" },
-    { name: "Chicken Thigh", calories: 209, protein: 26, per: "100g" },
-    { name: "Fish (Salmon)", calories: 208, protein: 25, per: "100g" },
-    { name: "Fish (Tuna)", calories: 144, protein: 30, per: "100g" },
-    { name: "Prawns", calories: 99, protein: 18, per: "100g" },
-    { name: "Egg (Whole)", calories: 155, protein: 13, per: "100g" },
-    { name: "Egg White", calories: 17, protein: 3.6, per: "100g" },
-    { name: "Mutton", calories: 294, protein: 25, per: "100g" },
-    { name: "Beef", calories: 250, protein: 26, per: "100g" },
-
-    // Dairy Products
-    { name: "Milk (Whole)", calories: 42, protein: 3.4, per: "100ml" },
-    { name: "Milk (Skimmed)", calories: 34, protein: 3.4, per: "100ml" },
-    { name: "Yogurt", calories: 98, protein: 11, per: "100g" },
-    { name: "Greek Yogurt", calories: 59, protein: 10, per: "100g" },
-    { name: "Paneer", calories: 265, protein: 18, per: "100g" },
-    { name: "Cottage Cheese", calories: 98, protein: 11, per: "100g" },
-    { name: "Cheddar Cheese", calories: 402, protein: 25, per: "100g" },
-    { name: "Butter", calories: 717, protein: 0.9, per: "100g" },
-    { name: "Ghee", calories: 900, protein: 0, per: "100g" },
-
-    // Nuts & Seeds
-    { name: "Almonds", calories: 579, protein: 21, per: "100g" },
-    { name: "Walnuts", calories: 654, protein: 15, per: "100g" },
-    { name: "Cashews", calories: 553, protein: 18, per: "100g" },
-    { name: "Pistachios", calories: 560, protein: 20, per: "100g" },
-    { name: "Peanuts", calories: 567, protein: 26, per: "100g" },
-    { name: "Sunflower Seeds", calories: 584, protein: 21, per: "100g" },
-    { name: "Chia Seeds", calories: 486, protein: 17, per: "100g" },
-    { name: "Flax Seeds", calories: 534, protein: 18, per: "100g" },
-
-    // Indian Snacks
-    { name: "Samosa", calories: 252, protein: 6, per: "100g" },
-    { name: "Pakora", calories: 300, protein: 8, per: "100g" },
-    { name: "Dhokla", calories: 160, protein: 4, per: "100g" },
-    { name: "Vada", calories: 220, protein: 5, per: "100g" },
-    { name: "Bhel Puri", calories: 168, protein: 4, per: "100g" },
-    { name: "Pani Puri", calories: 36, protein: 1, per: "100g" },
-
-    // Fast Food
-    { name: "Pizza (Cheese)", calories: 285, protein: 12, per: "100g" },
-    { name: "Burger (Veg)", calories: 390, protein: 16, per: "100g" },
-    { name: "Burger (Chicken)", calories: 540, protein: 25, per: "100g" },
-    { name: "French Fries", calories: 365, protein: 4, per: "100g" },
-    { name: "Hot Dog", calories: 290, protein: 10, per: "100g" },
-    { name: "Sandwich (Veg)", calories: 240, protein: 8, per: "100g" },
-
-    // Asian Cuisine
-    { name: "Fried Rice", calories: 163, protein: 3, per: "100g" },
-    { name: "Noodles (Hakka)", calories: 138, protein: 5, per: "100g" },
-    { name: "Chow Mein", calories: 198, protein: 6, per: "100g" },
-    { name: "Ramen", calories: 436, protein: 10, per: "100g" },
-    { name: "Maggi", calories: 435, protein: 11, per: "100g" },
-    { name: "Tofu", calories: 76, protein: 8, per: "100g" },
-    { name: "Kimchi", calories: 15, protein: 1.1, per: "100g" },
-    { name: "Sushi", calories: 200, protein: 9, per: "100g" },
-
-    // Indian Main Dishes
-    { name: "Biryani (Chicken)", calories: 290, protein: 12, per: "100g" },
-    { name: "Biryani (Veg)", calories: 250, protein: 6, per: "100g" },
-    { name: "Butter Chicken", calories: 438, protein: 24, per: "100g" },
-    { name: "Chicken Curry", calories: 180, protein: 20, per: "100g" },
-    { name: "Tandoori Chicken", calories: 150, protein: 27, per: "100g" },
-    { name: "Palak Paneer", calories: 270, protein: 14, per: "100g" },
-    { name: "Shahi Paneer", calories: 300, protein: 12, per: "100g" },
-    { name: "Aloo Gobi", calories: 55, protein: 2, per: "100g" },
-    { name: "Chole", calories: 164, protein: 8.9, per: "100g" },
-
-    // More items (continuing with complete database)
-    { name: "Kiwi", calories: 61, protein: 1.1, per: "100g" },
-    { name: "Cherries", calories: 63, protein: 1.1, per: "100g" },
-    { name: "Peach", calories: 39, protein: 0.9, per: "100g" },
-    { name: "Plum", calories: 46, protein: 0.7, per: "100g" },
-    { name: "Apricot", calories: 48, protein: 1.4, per: "100g" },
-    { name: "Turkey", calories: 189, protein: 29, per: "100g" },
-    { name: "Duck", calories: 337, protein: 19, per: "100g" },
-    { name: "Lamb", calories: 294, protein: 25, per: "100g" },
-    { name: "Sardines", calories: 208, protein: 25, per: "100g" },
-    { name: "Mackerel", calories: 205, protein: 19, per: "100g" },
-    { name: "Pasta (Cooked)", calories: 131, protein: 5, per: "100g" },
-    { name: "Spaghetti", calories: 158, protein: 6, per: "100g" },
-    { name: "Pizza Margherita", calories: 239, protein: 11, per: "100g" },
-    { name: "Croissant", calories: 406, protein: 8.2, per: "100g" },
-    { name: "Pancakes", calories: 227, protein: 6, per: "100g" },
-    { name: "Waffles", calories: 291, protein: 6, per: "100g" },
-    { name: "Ice Cream", calories: 207, protein: 3.5, per: "100g" },
-    { name: "Dark Chocolate", calories: 546, protein: 5, per: "100g" },
-    { name: "Cookies", calories: 502, protein: 5.9, per: "100g" },
-    { name: "Cake", calories: 257, protein: 4, per: "100g" },
-    { name: "Granola", calories: 471, protein: 13, per: "100g" },
-    { name: "Green Tea", calories: 2, protein: 0, per: "100ml" },
-    { name: "Coffee", calories: 2, protein: 0.3, per: "100ml" },
-    { name: "Lassi", calories: 89, protein: 2.4, per: "100ml" },
-    { name: "Avocado", calories: 160, protein: 2, per: "100g" },
-    { name: "Edamame", calories: 121, protein: 11, per: "100g" },
-    { name: "Quinoa Salad", calories: 172, protein: 6, per: "100g" },
-    { name: "Greek Salad", calories: 150, protein: 4, per: "100g" },
-    { name: "Caesar Salad", calories: 470, protein: 7, per: "100g" },
-    { name: "Smoothie Bowl", calories: 89, protein: 3, per: "100g" },
-    { name: "Protein Shake", calories: 103, protein: 20, per: "100ml" },
-    { name: "Energy Bar", calories: 406, protein: 20, per: "100g" },
-    { name: "Trail Mix", calories: 462, protein: 13, per: "100g" },
-    { name: "Popcorn", calories: 387, protein: 12, per: "100g" },
-    { name: "Pretzels", calories: 380, protein: 10, per: "100g" },
-    { name: "Bagel", calories: 250, protein: 10, per: "100g" }
-  ];
+  // Use the expanded food database
+  const FOOD_DATABASE = EXPANDED_FOOD_DATABASE;
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -317,32 +139,55 @@ const Index = () => {
     setIsAddingMeal(true);
   };
 
-  const addFood = (food: FoodItem) => {
+  // Updated addFood function to handle weight calculator
+  const handleFoodSelect = (food: FoodItem) => {
+    setSelectedFood(food);
+    setShowWeightCalculator(true);
+    setIsAddingMeal(false);
+  };
+
+  const handleWeightCalculated = (data: {
+    calories: number;
+    protein: number;
+    weight: number;
+    carbs?: number;
+    fat?: number;
+    fiber?: number;
+    aiEnhanced: boolean;
+  }) => {
     const newMeal: Meal = {
       id: Date.now(),
-      name: food.name,
-      calories: food.calories,
-      protein: food.protein,
-      type: selectedMealType
+      name: `${selectedFood?.name} (${data.weight}g)`,
+      calories: data.calories,
+      protein: data.protein,
+      type: selectedMealType,
+      weight: data.weight,
+      carbs: data.carbs,
+      fat: data.fat,
+      fiber: data.fiber,
+      aiEnhanced: data.aiEnhanced
     };
 
     setTodayMeals([...todayMeals, newMeal]);
-    setCaloriesConsumed(caloriesConsumed + food.calories);
-    setProteinConsumed(proteinConsumed + food.protein);
-    setIsAddingMeal(false);
+    setCaloriesConsumed(caloriesConsumed + data.calories);
+    setProteinConsumed(proteinConsumed + data.protein);
+    setShowWeightCalculator(false);
+    setSelectedFood(null);
     setSearchTerm('');
 
     toast({
-      title: "Meal Added! 🍽️",
-      description: `${food.name} added to ${selectedMealType}`,
+      title: `Meal Added! ${data.aiEnhanced ? '🤖' : '🍽️'}`,
+      description: `${selectedFood?.name} (${data.weight}g) added to ${selectedMealType}${data.aiEnhanced ? ' with AI nutrition data' : ''}`,
     });
   };
 
   const filteredFoods = searchTerm 
     ? FOOD_DATABASE.filter(food => 
-        food.name.toLowerCase().includes(searchTerm.toLowerCase())
-      ).slice(0, 15)
-    : FOOD_DATABASE.slice(0, 20);
+        food.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        food.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (food.origin && food.origin.toLowerCase().includes(searchTerm.toLowerCase()))
+      ).slice(0, 20)
+    : FOOD_DATABASE.slice(0, 30);
 
   const resetData = () => {
     localStorage.removeItem('calorieBuddyData');
@@ -375,7 +220,7 @@ const Index = () => {
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 CalorieBuddy
               </CardTitle>
-              <p className="text-muted-foreground mt-2">Your personal nutrition tracking companion</p>
+              <p className="text-muted-foreground mt-2">Your AI-powered nutrition tracking companion</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -398,12 +243,16 @@ const Index = () => {
                   Track calories & protein
                 </div>
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-secondary" />
-                  Monitor daily progress
+                  <Brain className="h-4 w-4 text-secondary" />
+                  AI-powered nutrition analysis
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Scale className="h-4 w-4 text-accent" />
+                  Dynamic weight-based calculations
                 </div>
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Sparkles className="h-4 w-4 text-accent" />
-                  Achieve your health goals
+                  500+ Indian & global foods
                 </div>
               </div>
             </div>
@@ -488,7 +337,7 @@ const Index = () => {
               <User className="h-8 w-8 text-primary" />
               Hey, {userName}! 👋
             </h1>
-            <p className="text-muted-foreground">Let's track your nutrition today</p>
+            <p className="text-muted-foreground">Let's track your nutrition today with AI precision</p>
           </div>
         </div>
 
@@ -686,13 +535,24 @@ const Index = () => {
                                meal.type === 'dinner' ? '🌙' : '🍪'}
                             </span>
                             <div>
-                              <p className="font-medium text-sm text-foreground">{meal.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm text-foreground">{meal.name}</p>
+                                {meal.aiEnhanced && (
+                                  <Badge variant="secondary" className="text-xs px-1 py-0">
+                                    <Brain className="h-3 w-3 mr-1" />
+                                    AI
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-xs text-foreground/60 capitalize">{meal.type}</p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
                             <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
+                            {meal.weight && (
+                              <p className="text-xs text-foreground/40">{meal.weight}g</p>
+                            )}
                           </div>
                         </div>
                       ))
@@ -723,18 +583,19 @@ const Index = () => {
           <HelpSection />
         )}
 
-        {/* Food Search Modal */}
+        {/* Enhanced Food Search Modal */}
         <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
                 <Search className="h-5 w-5" />
                 Add Food to {selectedMealType}
+                <Badge variant="outline" className="ml-2">{FOOD_DATABASE.length}+ foods</Badge>
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <Input
-                placeholder="Search for food items..."
+                placeholder="Search for food items, categories, or origins..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground"
@@ -745,20 +606,58 @@ const Index = () => {
                   <Button
                     key={index}
                     variant="outline"
-                    onClick={() => addFood(food)}
+                    onClick={() => handleFoodSelect(food)}
                     className="justify-between h-auto p-4 text-left hover:bg-primary/5 border-border/50 text-foreground"
                   >
-                    <div>
-                      <div className="font-medium text-foreground">{food.name}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="font-medium text-foreground">{food.name}</div>
+                        <Badge variant="secondary" className="text-xs">
+                          {food.category}
+                        </Badge>
+                        {food.origin && (
+                          <Badge variant="outline" className="text-xs">
+                            {food.origin}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-sm text-foreground/60">
-                        {food.calories} cal • {food.protein}g protein
+                        {food.calories} cal • {food.protein}g protein per 100g
                       </div>
                     </div>
-                    <Plus className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <Scale className="h-4 w-4 text-muted-foreground" />
+                      <Plus className="h-4 w-4" />
+                    </div>
                   </Button>
                 ))}
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Weight Calculator Modal */}
+        <Dialog open={showWeightCalculator} onOpenChange={setShowWeightCalculator}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Scale className="h-5 w-5" />
+                Calculate Nutrition
+              </DialogTitle>
+            </DialogHeader>
+            {selectedFood && (
+              <WeightCalculator
+                foodName={selectedFood.name}
+                baseCalories={selectedFood.calories}
+                baseProtein={selectedFood.protein}
+                onCalculated={handleWeightCalculated}
+                onCancel={() => {
+                  setShowWeightCalculator(false);
+                  setSelectedFood(null);
+                  setIsAddingMeal(true);
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
