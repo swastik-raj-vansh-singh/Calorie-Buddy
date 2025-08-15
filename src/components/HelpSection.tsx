@@ -104,10 +104,7 @@ export const HelpSection: React.FC = () => {
               {isSubmitting ? "Sending..." : "Send Suggestion"}
             </Button>
             <div className="text-xs text-muted-foreground text-center space-y-1">
-              <p><strong>How it works:</strong></p>
-              <p>1. Fill in the food name and optional details</p>
-              <p>2. Click "Send Suggestion" to email directly to our team</p>
-              <p>3. You'll get a confirmation when sent successfully!</p>
+              <p>Email is sent to Swastik Rajwant Singh, 0@gmail.com</p>
             </div>
           </CardContent>
         </Card>
