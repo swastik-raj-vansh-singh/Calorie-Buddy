@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Send, MessageSquare, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Suggestion {
   food: string;
@@ -16,9 +17,10 @@ export const HelpSection: React.FC = () => {
   const [foodName, setFoodName] = useState('');
   const [comment, setComment] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmitFood = () => {
+  const handleSubmitFood = async () => {
     if (!foodName.trim()) {
       toast({
         title: "Please enter a food name",
@@ -27,53 +29,48 @@ export const HelpSection: React.FC = () => {
       return;
     }
 
-    // Prepare email content
-    const emailSubject = `Food Suggestion: ${foodName}`;
-    const emailBody = `Hi,
+    setIsSubmitting(true);
 
-I would like to suggest adding "${foodName}" to the CalorieBuddy food database.
-
-${comment ? `Additional details: ${comment}` : ''}
-
-Date: ${new Date().toLocaleDateString()}
-
-Best regards,
-A CalorieBuddy user`;
-
-    // Copy to clipboard as fallback
-    const emailContent = `To: swastikrajvanshsingh0@gmail.com
-Subject: ${emailSubject}
-
-${emailBody}`;
-
-    navigator.clipboard.writeText(emailContent).then(() => {
-      toast({
-        title: "Email content copied!",
-        description: "Email details copied to clipboard. You can paste this into your email app.",
+    try {
+      const { data, error } = await supabase.functions.invoke('send-suggestion-email', {
+        body: {
+          foodName: foodName.trim(),
+          comment: comment.trim() || undefined,
+        }
       });
-    }).catch(() => {
+
+      if (error) {
+        throw error;
+      }
+
+      // Save to localStorage for tracking
+      const existingSuggestions = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
+      const newSuggestion = {
+        food: foodName,
+        comment: comment,
+        date: new Date().toLocaleDateString()
+      };
+      const newSuggestions = [...existingSuggestions, newSuggestion];
+      localStorage.setItem('foodSuggestions', JSON.stringify(newSuggestions));
+      setSuggestions(newSuggestions);
+
       toast({
-        title: "Manual email required",
-        description: "Please manually send an email to swastikrajvanshsingh0@gmail.com with your suggestion.",
+        title: "✅ Suggestion sent successfully!",
+        description: "Thank you! Your food suggestion has been emailed to swastikrajvanshsingh0@gmail.com",
       });
-    });
 
-    // Try mailto as secondary option
-    const mailtoLink = `mailto:swastikrajvanshsingh0@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailtoLink, '_blank');
-
-    // Save to localStorage for tracking
-    const existingSuggestions = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
-    const newSuggestions = [...existingSuggestions, {
-      food: foodName,
-      comment: comment,
-      date: new Date().toLocaleDateString()
-    }];
-    localStorage.setItem('foodSuggestions', JSON.stringify(newSuggestions));
-    setSuggestions(newSuggestions);
-
-    setFoodName('');
-    setComment('');
+      setFoodName('');
+      setComment('');
+    } catch (error: any) {
+      console.error('Error sending suggestion:', error);
+      toast({
+        title: "Failed to send suggestion",
+        description: "Please try again or contact support if the issue persists.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   React.useEffect(() => {
@@ -150,16 +147,16 @@ ${emailBody}`;
             <Button 
               onClick={handleSubmitFood} 
               className="w-full"
-              disabled={!foodName.trim()}
+              disabled={!foodName.trim() || isSubmitting}
             >
               <Send className="h-4 w-4 mr-2" />
-              Send Suggestion
+              {isSubmitting ? "Sending..." : "Send Suggestion"}
             </Button>
             <div className="text-xs text-muted-foreground text-center space-y-1">
-              <p><strong>Steps to send:</strong></p>
-              <p>1. Click button to copy email content</p>
-              <p>2. Open your email app (Gmail, Outlook, etc.)</p>
-              <p>3. Paste and send to: <strong>swastikrajvanshsingh0@gmail.com</strong></p>
+              <p><strong>How it works:</strong></p>
+              <p>1. Fill in the food name and optional details</p>
+              <p>2. Click "Send Suggestion" to email directly to our team</p>
+              <p>3. You'll get a confirmation when sent successfully!</p>
             </div>
           </CardContent>
         </Card>
