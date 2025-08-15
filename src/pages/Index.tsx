@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain, Camera } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain, Camera, LogOut, LogIn } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navigation } from '@/components/Navigation';
@@ -16,6 +16,9 @@ import { WeightCalculator } from '@/components/WeightCalculator';
 import { FoodParser } from '@/components/FoodParser';
 import { ImageFoodRecognition } from '@/components/ImageFoodRecognition';
 import { GeminiNutritionService } from '@/services/geminiService';
+import { useAuth } from '@/hooks/useAuth';
+import { SupabaseDataService, DatabaseMeal } from '@/services/supabaseDataService';
+import { useNavigate } from 'react-router-dom';
 
 interface Meal {
   id: number;
@@ -31,98 +34,40 @@ interface Meal {
 }
 
 const Index = () => {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Local state for non-authenticated users
   const [isWelcome, setIsWelcome] = useState(true);
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [userName, setUserName] = useState('');
   const [tempUserName, setTempUserName] = useState('');
+  
+  // Nutrition state
   const [calorieGoal, setCalorieGoal] = useState(2000);
   const [proteinGoal, setProteinGoal] = useState(150);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
   const [goalType, setGoalType] = useState<'bulk' | 'cut'>('bulk');
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
+  
+  // UI state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [isAddingMeal, setIsAddingMeal] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
-  const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [selectedFoodName, setSelectedFoodName] = useState<string>('');
   const [showWeightCalculator, setShowWeightCalculator] = useState(false);
   const [showFoodParser, setShowFoodParser] = useState(false);
   const [showImageRecognition, setShowImageRecognition] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const { toast } = useToast();
-
-  // Initialize Gemini service
+  
+  // Services
+  const dataService = new SupabaseDataService();
   const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
-
-  // Show calorie consumption alert with motivational messages
-  const showCalorieConsumptionAlert = (consumedCalories: number, consumedProtein: number, totalCalories: number) => {
-    const remainingCalories = calorieGoal - totalCalories;
-    const remainingProtein = proteinGoal - proteinConsumed - consumedProtein;
-    
-    let title = "";
-    let description = "";
-    
-    if (totalCalories > calorieGoal * 1.2) {
-      // Overconsumption warning
-      title = "⚠️ High Calorie Intake!";
-      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your daily goal. Consider lighter meals for the rest of the day.`;
-    } else if (totalCalories > calorieGoal) {
-      // Slightly over goal
-      title = "🎯 Goal Exceeded";
-      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your goal. Great progress on nutrition!`;
-    } else {
-      // Within goal
-      title = "✅ Meal Added Successfully!";
-      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). ${remainingCalories} calories remaining for today. Keep it up! 💪`;
-    }
-
-    // Custom alert dialog instead of toast
-    const alertDialog = document.createElement('div');
-    alertDialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
-    alertDialog.innerHTML = `
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mx-4 max-w-md shadow-xl border">
-        <div class="text-center space-y-4">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${title}</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-300">${description}</p>
-          <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors">
-            Got it!
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(alertDialog);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      if (alertDialog.parentNode) {
-        alertDialog.remove();
-      }
-    }, 5000);
-  };
-
-  // Handle quick meal suggestion click
-  const handleQuickSuggestionClick = (suggestion: string) => {
-    setSearchTerm(suggestion);
-    setIsAddingMeal(false);
-    
-    // Check if the suggestion contains multiple food items
-    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
-    const isComplexDescription = complexIndicators.some(indicator => 
-      suggestion.toLowerCase().includes(indicator)
-    ) || suggestion.split(' ').length > 3;
-
-    if (isComplexDescription) {
-      setShowFoodParser(true);
-    } else {
-      setSelectedFoodName(suggestion);
-      setShowWeightCalculator(true);
-    }
-  };
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -132,14 +77,21 @@ const Index = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Load data from localStorage on component mount
+  // Load data based on auth status
   useEffect(() => {
-    const savedData = localStorage.getItem('calorieBuddyData');
-    if (savedData) {
-      const data = JSON.parse(savedData);
-      setIsWelcome(false);
-      setIsOnboarding(false);
-      setUserName(data.userName || '');
+    if (authLoading) return;
+    
+    if (user) {
+      // User is authenticated - load from database
+      loadUserData();
+    } else {
+      // User is not authenticated - check localStorage for guest mode
+      const savedData = localStorage.getItem('calorieBuddyData');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        setIsWelcome(false);
+        setIsOnboarding(false);
+        setUserName(data.userName || '');
         setCalorieGoal(data.calorieGoal || 2000);
         setProteinGoal(data.proteinGoal || 150);
         setCaloriesConsumed(data.caloriesConsumed || 0);
@@ -147,12 +99,72 @@ const Index = () => {
         setGoalType(data.goalType || 'bulk');
         setTodayMeals(data.todayMeals || []);
         setHistoricalData(data.historicalData || []);
+      }
     }
-  }, []);
+  }, [user, authLoading]);
 
-  // Save data to localStorage whenever state changes
+  const loadUserData = async () => {
+    if (!user) return;
+    
+    try {
+      // Load user goals
+      const goals = await dataService.getUserGoals();
+      if (goals) {
+        setCalorieGoal(goals.calorie_goal);
+        setProteinGoal(goals.protein_goal);
+      }
+      
+      // Load today's meals
+      const meals = await dataService.getMeals();
+      const todayMeals = meals.filter(meal => {
+        const mealDate = new Date(meal.created_at).toDateString();
+        const today = new Date().toDateString();
+        return mealDate === today;
+      });
+      
+      // Convert database meals to local format
+      const convertedMeals: Meal[] = todayMeals.map(meal => ({
+        id: parseInt(meal.id.slice(-8), 16), // Convert UUID to number for compatibility
+        name: meal.name,
+        calories: meal.calories,
+        protein: meal.protein,
+        type: meal.meal_type,
+        carbs: meal.carbs,
+        fat: meal.fat,
+        fiber: meal.fiber,
+        aiEnhanced: true
+      }));
+      
+      setTodayMeals(convertedMeals);
+      
+      // Calculate consumed values
+      const totalCalories = convertedMeals.reduce((sum, meal) => sum + meal.calories, 0);
+      const totalProtein = convertedMeals.reduce((sum, meal) => sum + meal.protein, 0);
+      setCaloriesConsumed(totalCalories);
+      setProteinConsumed(totalProtein);
+      
+      // Load historical data
+      const stats = await dataService.getDailyMealStats(7);
+      setHistoricalData(stats);
+      
+      // User is authenticated, so skip welcome/onboarding
+      setIsWelcome(false);
+      setIsOnboarding(false);
+      setUserName(user.email?.split('@')[0] || 'User');
+      
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast({
+        title: "Error loading data",
+        description: "There was an issue loading your data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Save data to localStorage for non-authenticated users only
   useEffect(() => {
-    if (!isWelcome && !isOnboarding && userName) {
+    if (!user && !isWelcome && !isOnboarding && userName) {
       const today = new Date().toLocaleDateString();
       
       // Update historical data
@@ -185,57 +197,67 @@ const Index = () => {
       localStorage.setItem('calorieBuddyData', JSON.stringify(dataToSave));
       setHistoricalData(updatedHistoricalData);
     }
-  }, [calorieGoal, proteinGoal, caloriesConsumed, proteinConsumed, todayMeals, isWelcome, isOnboarding, userName]);
+  }, [user, calorieGoal, proteinGoal, caloriesConsumed, proteinConsumed, todayMeals, isWelcome, isOnboarding, userName]);
 
-  const handleWelcomeNext = () => {
-    if (tempUserName.trim()) {
-      setUserName(tempUserName.trim());
-      setIsWelcome(false);
-      setIsOnboarding(true);
+  const showCalorieConsumptionAlert = (consumedCalories: number, consumedProtein: number, totalCalories: number) => {
+    const remainingCalories = calorieGoal - totalCalories;
+    
+    let title = "";
+    let description = "";
+    
+    if (totalCalories > calorieGoal * 1.2) {
+      title = "⚠️ High Calorie Intake!";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your daily goal.`;
+    } else if (totalCalories > calorieGoal) {
+      title = "🎯 Goal Exceeded";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your goal.`;
+    } else {
+      title = "✅ Meal Added Successfully!";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). ${remainingCalories} calories remaining for today.`;
+    }
+
+    toast({
+      title,
+      description,
+    });
+  };
+
+  const handleQuickSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setIsAddingMeal(false);
+    
+    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
+    const isComplexDescription = complexIndicators.some(indicator => 
+      suggestion.toLowerCase().includes(indicator)
+    ) || suggestion.split(' ').length > 3;
+
+    if (isComplexDescription) {
+      setShowFoodParser(true);
+    } else {
+      setSelectedFoodName(suggestion);
+      setShowWeightCalculator(true);
     }
   };
 
-  const handleOnboardingComplete = () => {
-    setIsOnboarding(false);
-  };
-
-  const handleQuickAdd = (mealType: string) => {
-    setSelectedMealType(mealType);
-    setIsAddingMeal(true);
-  };
-
-  // Handle food search with AI - check if it's a complex description
   const handleFoodSearch = async () => {
-    if (!searchTerm.trim()) {
-      return;
-    }
+    if (!searchTerm.trim()) return;
 
-    // Check if the search term contains multiple food items or complex description
     const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
     const isComplexDescription = complexIndicators.some(indicator => 
       searchTerm.toLowerCase().includes(indicator)
     ) || searchTerm.split(' ').length > 3;
 
     if (isComplexDescription) {
-      // Use smart food parser for complex descriptions
       setShowFoodParser(true);
       setIsAddingMeal(false);
     } else {
-      // Use single food calculator for simple items
       setSelectedFoodName(searchTerm);
       setShowWeightCalculator(true);
       setIsAddingMeal(false);
     }
   };
 
-  // Handle Enter key in search
-  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleFoodSearch();
-    }
-  };
-
-  const handleWeightCalculated = (data: {
+  const handleWeightCalculated = async (data: {
     calories: number;
     protein: number;
     weight: number;
@@ -259,6 +281,29 @@ const Index = () => {
       aiEnhanced: data.aiEnhanced
     };
 
+    // Save to database if user is authenticated
+    if (user) {
+      try {
+        await dataService.addMeal({
+          name: newMeal.name,
+          calories: newMeal.calories,
+          protein: newMeal.protein,
+          meal_type: newMeal.type,
+          carbs: newMeal.carbs,
+          fat: newMeal.fat,
+          fiber: newMeal.fiber,
+        });
+      } catch (error) {
+        console.error('Error saving meal:', error);
+        toast({
+          title: "Error saving meal",
+          description: "There was an issue saving your meal. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const newCaloriesConsumed = caloriesConsumed + data.calories;
     const newProteinConsumed = proteinConsumed + data.protein;
     
@@ -269,14 +314,37 @@ const Index = () => {
     setSelectedFoodName('');
     setSearchTerm('');
 
-    // Show calorie consumption popup
     showCalorieConsumptionAlert(data.calories, data.protein, newCaloriesConsumed);
   };
 
-  // Handle multiple items from food parser
-  const handleMultipleItemsCalculated = (items: any[]) => {
+  const handleMultipleItemsCalculated = async (items: any[]) => {
     const totalCalories = items.reduce((sum, item) => sum + item.calories, 0);
     const totalProtein = items.reduce((sum, item) => sum + item.protein, 0);
+    
+    // Save to database if user is authenticated
+    if (user) {
+      try {
+        for (const item of items) {
+          await dataService.addMeal({
+            name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            meal_type: item.type,
+            carbs: item.carbs,
+            fat: item.fat,
+            fiber: item.fiber,
+          });
+        }
+      } catch (error) {
+        console.error('Error saving meals:', error);
+        toast({
+          title: "Error saving meals",
+          description: "There was an issue saving your meals. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
     const newCaloriesConsumed = caloriesConsumed + totalCalories;
     const newProteinConsumed = proteinConsumed + totalProtein;
@@ -287,16 +355,13 @@ const Index = () => {
     setShowFoodParser(false);
     setSearchTerm('');
 
-    // Show calorie consumption popup
     showCalorieConsumptionAlert(totalCalories, totalProtein, newCaloriesConsumed);
   };
 
-  // Handle image recognition result
   const handleImageFoodDetected = (foodDescription: string) => {
     setSearchTerm(foodDescription);
     setShowImageRecognition(false);
     
-    // Process the detected food description
     const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
     const isComplexDescription = complexIndicators.some(indicator => 
       foodDescription.toLowerCase().includes(indicator)
@@ -310,12 +375,49 @@ const Index = () => {
     }
   };
 
-  // Quick food suggestions for common items
-  const quickSuggestions = [
-    'Rice and Dal', 'Roti with Sabzi', 'Chicken Curry', 'Paneer Tikka', 'Biryani',
-    'Naan', 'Samosa', 'Kachori', 'Chole Bhature', 'Dosa', 'Idli', 'Uttapam',
-    'Burger', 'Pizza', 'Pasta', 'Sandwich', 'Salad', 'Fruits', 'Nuts', 'Yogurt'
-  ];
+  const handleWelcomeNext = () => {
+    if (tempUserName.trim()) {
+      setUserName(tempUserName.trim());
+      setIsWelcome(false);
+      setIsOnboarding(true);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    // Save goals to database if user is authenticated
+    if (user) {
+      try {
+        await dataService.updateUserGoals(calorieGoal, proteinGoal);
+      } catch (error) {
+        console.error('Error saving goals:', error);
+      }
+    }
+    setIsOnboarding(false);
+  };
+
+  const handleQuickAdd = (mealType: string) => {
+    setSelectedMealType(mealType);
+    setIsAddingMeal(true);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // Clear local state
+      setIsWelcome(true);
+      setIsOnboarding(false);
+      setUserName('');
+      setCalorieGoal(2000);
+      setProteinGoal(150);
+      setCaloriesConsumed(0);
+      setProteinConsumed(0);
+      setTodayMeals([]);
+      setHistoricalData([]);
+      localStorage.removeItem('calorieBuddyData');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const resetData = () => {
     localStorage.removeItem('calorieBuddyData');
@@ -334,8 +436,25 @@ const Index = () => {
     setShowResetDialog(false);
   };
 
-  // Welcome Screen
-  if (isWelcome) {
+  const quickSuggestions = [
+    'Rice and Dal', 'Roti with Sabzi', 'Chicken Curry', 'Paneer Tikka', 'Biryani',
+    'Naan', 'Samosa', 'Kachori', 'Chole Bhature', 'Dosa', 'Idli', 'Uttapam',
+    'Burger', 'Pizza', 'Pasta', 'Sandwich', 'Salad', 'Fruits', 'Nuts', 'Yogurt'
+  ];
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Welcome Screen (for non-authenticated users)
+  if (isWelcome && !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center animate-fade-in bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
@@ -349,6 +468,29 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {!user && (
+              <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-accent/20">
+                <div className="flex items-center justify-center gap-2 text-primary">
+                  <LogIn className="h-5 w-5" />
+                  <span className="font-medium">Want to track your journey?</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sign in to save your progress, track historical data, and access your nutrition goals from any device.
+                </p>
+                <Button 
+                  onClick={() => navigate('/auth')} 
+                  className="w-full"
+                  variant="default"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In / Sign Up
+                </Button>
+                <div className="text-xs text-muted-foreground">
+                  Or continue as guest (data won't be saved)
+                </div>
+              </div>
+            )}
+            
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground text-left block">
@@ -374,10 +516,6 @@ const Index = () => {
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Scale className="h-4 w-4 text-accent" />
                   Dynamic weight-based calculations
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Sparkles className="h-4 w-4 text-accent" />
-                  500+ Indian & global foods
                 </div>
               </div>
             </div>
@@ -480,7 +618,32 @@ const Index = () => {
               <User className="h-8 w-8 text-primary" />
               Hey, {userName}! 👋
             </h1>
-            <p className="text-muted-foreground">Let's track your nutrition today with AI precision</p>
+            <p className="text-muted-foreground">
+              {user ? 'Your nutrition journey is being tracked!' : 'Tracking in guest mode - Sign in to save progress'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSignOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            ) : (
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => navigate('/auth')}
+                className="flex items-center gap-2"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
 
@@ -558,12 +721,6 @@ const Index = () => {
                         : 'text-foreground/80'
                     }`}>
                       {((caloriesConsumed / calorieGoal) * 100).toFixed(1)}% of daily goal
-                      {goalType === 'bulk' && caloriesConsumed < calorieGoal && (
-                        <span className="block text-xs">⚠️ Below goal for bulking</span>
-                      )}
-                      {goalType === 'cut' && caloriesConsumed > calorieGoal && (
-                        <span className="block text-xs">⚠️ Above goal for cutting</span>
-                      )}
                     </p>
                   </div>
                 </CardContent>
@@ -678,32 +835,34 @@ const Index = () => {
                     <Clock className="h-5 w-5 text-secondary" />
                     Recent Meals
                   </CardTitle>
-                  <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="hover:bg-destructive/10 text-foreground">
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Reset
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-card border-border">
-                      <DialogHeader>
-                        <DialogTitle className="text-foreground">Reset All Data</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-foreground/80">
-                          Are you sure you want to reset all your data? This will clear your goals, meals, and progress.
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                          <Button variant="outline" onClick={() => setShowResetDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button variant="destructive" onClick={resetData}>
-                            Reset Everything
-                          </Button>
+                  {!user && (
+                    <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="hover:bg-destructive/10 text-foreground">
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Reset
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-card border-border">
+                        <DialogHeader>
+                          <DialogTitle className="text-foreground">Reset All Data</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <p className="text-foreground/80">
+                            Are you sure you want to reset all your data? This will clear your goals, meals, and progress.
+                          </p>
+                          <div className="flex gap-3 justify-end">
+                            <Button variant="outline" onClick={() => setShowResetDialog(false)}>
+                              Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={resetData}>
+                              Reset Everything
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -795,7 +954,7 @@ const Index = () => {
                   placeholder="Type any food item (e.g., cheese burger with extra cheese and 100ml coke)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={handleSearchKeyPress}
+                  onKeyPress={(e) => e.key === 'Enter' && handleFoodSearch()}
                   className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground pr-32"
                 />
                 <div className="absolute right-1 top-1 flex gap-1">
