@@ -35,7 +35,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   const [hasParsed, setHasParsed] = useState(false);
   const { toast } = useToast();
 
-  const geminiService = new GeminiNutritionService('AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ');
+  const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
 
   const parseDescription = async () => {
     if (!foodDescription.trim()) return;
@@ -66,7 +66,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       ]
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

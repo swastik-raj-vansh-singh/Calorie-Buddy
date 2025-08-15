@@ -55,7 +55,7 @@ const Index = () => {
   const { toast } = useToast();
 
   // Initialize Gemini service
-  const geminiService = new GeminiNutritionService('AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ');
+  const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
 
   // Show calorie consumption alert with motivational messages
   const showCalorieConsumptionAlert = (consumedCalories: number, consumedProtein: number, totalCalories: number) => {
