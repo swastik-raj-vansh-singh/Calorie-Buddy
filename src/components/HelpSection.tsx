@@ -4,19 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { HelpCircle, Send, MessageSquare, Plus } from 'lucide-react';
+import { HelpCircle, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Suggestion {
-  food: string;
-  comment: string;
-  date: string;
-}
 
 export const HelpSection: React.FC = () => {
   const [foodName, setFoodName] = useState('');
   const [comment, setComment] = useState('');
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -43,17 +37,6 @@ export const HelpSection: React.FC = () => {
         throw error;
       }
 
-      // Save to localStorage for tracking
-      const existingSuggestions = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
-      const newSuggestion = {
-        food: foodName,
-        comment: comment,
-        date: new Date().toLocaleDateString()
-      };
-      const newSuggestions = [...existingSuggestions, newSuggestion];
-      localStorage.setItem('foodSuggestions', JSON.stringify(newSuggestions));
-      setSuggestions(newSuggestions);
-
       toast({
         title: "✅ Suggestion sent successfully!",
         description: "Thank you! Your food suggestion has been emailed to swastikrajvanshsingh0@gmail.com",
@@ -73,44 +56,12 @@ export const HelpSection: React.FC = () => {
     }
   };
 
-  React.useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
-    setSuggestions(saved);
-  }, []);
-
   return (
     <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2">🤝 Help & Suggestions</h2>
         <p className="text-muted-foreground">Help us improve by suggesting missing foods or sharing feedback</p>
       </div>
-
-      {/* Recent Suggestions - Moved to top */}
-      {suggestions.length > 0 && (
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50 mb-6">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Your Recent Suggestions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {suggestions.slice(-5).reverse().map((suggestion, index) => (
-                <div key={index} className="border border-border/50 rounded-lg p-3 bg-background/30">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-foreground">{suggestion.food}</h4>
-                    <span className="text-xs text-muted-foreground">{suggestion.date}</span>
-                  </div>
-                  {suggestion.comment && (
-                    <p className="text-sm text-muted-foreground">{suggestion.comment}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Submit Food Suggestion */}
