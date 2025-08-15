@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Sparkles, Scale } from 'lucide-react';
 import { GeminiNutritionService } from '@/services/geminiService';
 import { useToast } from '@/hooks/use-toast';
@@ -32,43 +33,96 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   onCalculated,
   onCancel
 }) => {
-  // Detect food type and set appropriate unit and default weight
-  const detectFoodType = (name: string) => {
+  // Enhanced unit detection with dropdown options
+  const getSmartUnitForFood = (name: string) => {
     const lowerName = name.toLowerCase();
     
-    // Liquids
-    if (lowerName.includes('coke') || lowerName.includes('juice') || lowerName.includes('milk') || 
-        lowerName.includes('water') || lowerName.includes('coffee') || lowerName.includes('tea') ||
-        lowerName.includes('soda') || lowerName.includes('drink') || lowerName.includes('beer') ||
-        lowerName.includes('wine') || lowerName.includes('smoothie') || lowerName.includes('shake')) {
-      return { type: 'liquid', unit: 'ml', defaultWeight: 250 };
+    // Drinks/Liquids
+    if (lowerName.includes('coke') || lowerName.includes('cola') || lowerName.includes('juice') || 
+        lowerName.includes('milk') || lowerName.includes('water') || lowerName.includes('tea') || 
+        lowerName.includes('coffee') || lowerName.includes('beer') || lowerName.includes('wine') || 
+        lowerName.includes('soda') || lowerName.includes('drink')) {
+      return {
+        defaultUnit: 'ml',
+        defaultWeight: 250,
+        dropdownOptions: ['ml', 'grams', 'quantity', 'slices', 'size', 'teaspoon']
+      };
     }
     
-    // Spices/condiments
-    if (lowerName.includes('sugar') || lowerName.includes('salt') || lowerName.includes('oil') ||
-        lowerName.includes('honey') || lowerName.includes('spice') || lowerName.includes('sauce') ||
-        lowerName.includes('ketchup') || lowerName.includes('mayo') || lowerName.includes('butter') ||
-        lowerName.includes('jam') || lowerName.includes('cream') || lowerName.includes('syrup')) {
-      return { type: 'spice', unit: 'tsp', defaultWeight: 5 };
+    // Pizza
+    if (lowerName.includes('pizza')) {
+      return {
+        defaultUnit: 'size',
+        defaultWeight: 'medium',
+        dropdownOptions: ['small', 'medium', 'regular', 'large']
+      };
     }
     
-    // Default to solid
-    return { type: 'solid', unit: 'g', defaultWeight: 100 };
+    // Counted items
+    if (lowerName.includes('gulab jamun') || lowerName.includes('samosa') || lowerName.includes('dosa') || 
+        lowerName.includes('egg') || lowerName.includes('banana') || lowerName.includes('apple') || 
+        lowerName.includes('chole bhature') || lowerName.includes('idli') || lowerName.includes('vada') ||
+        lowerName.includes('paratha') || lowerName.includes('naan') || lowerName.includes('chapati') ||
+        lowerName.includes('roti')) {
+      return {
+        defaultUnit: 'quantity',
+        defaultWeight: 1,
+        dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+      };
+    }
+    
+    // Cheese
+    if (lowerName.includes('cheese')) {
+      return {
+        defaultUnit: 'slices',
+        defaultWeight: 2,
+        dropdownOptions: ['slices', 'grams', 'ml', 'quantity', 'size', 'teaspoon']
+      };
+    }
+    
+    // Spices and condiments
+    if (lowerName.includes('sugar') || lowerName.includes('salt') || lowerName.includes('oil') || 
+        lowerName.includes('honey') || lowerName.includes('jam') || lowerName.includes('sauce') ||
+        lowerName.includes('spice') || lowerName.includes('masala') || lowerName.includes('powder')) {
+      return {
+        defaultUnit: 'teaspoon',
+        defaultWeight: 1,
+        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'size']
+      };
+    }
+    
+    // Default to grams for solids
+    return {
+      defaultUnit: 'grams',
+      defaultWeight: 100,
+      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
+    };
   };
 
-  const foodTypeInfo = detectFoodType(foodName);
-  const [weight, setWeight] = useState(foodTypeInfo.defaultWeight);
+  const foodInfo = getSmartUnitForFood(foodName);
+  const [weight, setWeight] = useState<string | number>(foodInfo.defaultWeight);
+  const [selectedUnit, setSelectedUnit] = useState(foodInfo.defaultUnit);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
   const { toast } = useToast();
 
   const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
 
+  // Get numeric weight for API calls
+  const getNumericWeight = () => {
+    if (typeof weight === 'string') {
+      if (selectedUnit === 'size') return weight === 'small' ? 200 : weight === 'medium' ? 350 : weight === 'large' ? 500 : 350;
+      return parseFloat(weight) || 100;
+    }
+    return weight;
+  };
+
   // Get AI-powered nutrition data (always use AI for accuracy)
   const getAIData = async () => {
     setIsLoadingAI(true);
     try {
-      const result = await geminiService.getNutritionData(foodName, weight);
+      const numericWeight = getNumericWeight();
+      const result = await geminiService.getNutritionData(foodName, numericWeight);
       // Set confidence to 100% as user trusts Gemini completely
       const enhancedResult = {
         ...result,
@@ -81,7 +135,8 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       // Retry once more for accuracy
       try {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-        const result = await geminiService.getNutritionData(foodName, weight);
+        const numericWeight = getNumericWeight();
+        const result = await geminiService.getNutritionData(foodName, numericWeight);
         const enhancedResult = {
           ...result,
           confidence: 1.0
@@ -112,8 +167,8 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         carbs: aiData.nutrition.carbs,
         fat: aiData.nutrition.fat,
         fiber: aiData.nutrition.fiber,
-        weight,
-        unit: foodTypeInfo.unit,
+        weight: getNumericWeight(),
+        unit: selectedUnit,
         aiEnhanced: true
       });
     }
@@ -131,24 +186,61 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       </div>
 
       {/* Weight Input */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         <Label htmlFor="weight" className="flex items-center gap-2">
           <Scale className="h-4 w-4" />
-          {foodTypeInfo.type === 'liquid' ? 'Volume (milliliters)' : 
-           foodTypeInfo.type === 'spice' ? 'Amount (teaspoons)' : 
-           'Weight (grams)'}
+          Amount ({selectedUnit})
         </Label>
-        <Input
-          id="weight"
-          type="number"
-          value={weight}
-          onChange={(e) => setWeight(Number(e.target.value))}
-          min="1"
-          max={foodTypeInfo.type === 'liquid' ? 2000 : foodTypeInfo.type === 'spice' ? 50 : 2000}
-          className="text-center text-lg font-semibold"
-        />
+        
+        <div className="flex gap-2">
+          {selectedUnit === 'size' ? (
+            <Select
+              value={weight.toString()}
+              onValueChange={(value) => setWeight(value)}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select size" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">Small</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="large">Large</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="weight"
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(Number(e.target.value) || 0)}
+              min="1"
+              max={2000}
+              className="flex-1 text-center text-lg font-semibold"
+              placeholder="Enter amount"
+            />
+          )}
+          
+          <Select
+            value={selectedUnit}
+            onValueChange={(value) => setSelectedUnit(value)}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {foodInfo.dropdownOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Quick Select Buttons */}
         <div className="flex gap-2 justify-center flex-wrap">
-          {foodTypeInfo.type === 'liquid' ? 
+          {selectedUnit === 'ml' && 
             [100, 200, 250, 300, 500].map((w) => (
               <Button
                 key={w}
@@ -159,8 +251,9 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
               >
                 {w}ml
               </Button>
-            )) :
-           foodTypeInfo.type === 'spice' ?
+            ))
+          }
+          {selectedUnit === 'teaspoon' &&
             [1, 2, 5, 10, 15].map((w) => (
               <Button
                 key={w}
@@ -171,7 +264,9 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
               >
                 {w}tsp
               </Button>
-            )) :
+            ))
+          }
+          {selectedUnit === 'grams' &&
             [50, 100, 150, 200, 250].map((w) => (
               <Button
                 key={w}
@@ -181,6 +276,32 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
                 className={weight === w ? "bg-primary text-primary-foreground" : ""}
               >
                 {w}g
+              </Button>
+            ))
+          }
+          {selectedUnit === 'quantity' &&
+            [1, 2, 3, 4, 5].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w}
+              </Button>
+            ))
+          }
+          {selectedUnit === 'slices' &&
+            [1, 2, 3, 4, 5].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w} slice{w > 1 ? 's' : ''}
               </Button>
             ))
           }
