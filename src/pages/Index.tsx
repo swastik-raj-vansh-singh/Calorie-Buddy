@@ -123,6 +123,30 @@ const Index = () => {
     }
   };
 
+  // Function to get the correct unit for display based on food name
+  const getCorrectUnit = (foodName: string) => {
+    const lowerName = foodName.toLowerCase();
+    
+    // Liquids
+    if (lowerName.includes('coke') || lowerName.includes('juice') || lowerName.includes('milk') || 
+        lowerName.includes('water') || lowerName.includes('coffee') || lowerName.includes('tea') ||
+        lowerName.includes('soda') || lowerName.includes('drink') || lowerName.includes('beer') ||
+        lowerName.includes('wine') || lowerName.includes('smoothie') || lowerName.includes('shake')) {
+      return 'ml';
+    }
+    
+    // Spices/condiments
+    if (lowerName.includes('sugar') || lowerName.includes('salt') || lowerName.includes('oil') ||
+        lowerName.includes('honey') || lowerName.includes('spice') || lowerName.includes('sauce') ||
+        lowerName.includes('ketchup') || lowerName.includes('mayo') || lowerName.includes('butter') ||
+        lowerName.includes('jam') || lowerName.includes('cream') || lowerName.includes('syrup')) {
+      return 'tsp';
+    }
+    
+    // Default to grams for solids
+    return 'g';
+  };
+
   // Check mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -671,9 +695,9 @@ const Index = () => {
                           <div className="text-right">
                             <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
                             <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
-                            {meal.weight && (
-                              <p className="text-xs text-foreground/40">{meal.weight}g</p>
-                            )}
+                             {meal.weight && (
+                               <p className="text-xs text-foreground/40">{meal.weight}{getCorrectUnit(meal.name)}</p>
+                             )}
                           </div>
                         </div>
                       ))
