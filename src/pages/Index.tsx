@@ -39,6 +39,7 @@ const Index = () => {
   const [proteinGoal, setProteinGoal] = useState(150);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
+  const [goalType, setGoalType] = useState<'bulk' | 'cut'>('bulk');
   const [todayMeals, setTodayMeals] = useState<Meal[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
@@ -139,12 +140,13 @@ const Index = () => {
       setIsWelcome(false);
       setIsOnboarding(false);
       setUserName(data.userName || '');
-      setCalorieGoal(data.calorieGoal || 2000);
-      setProteinGoal(data.proteinGoal || 150);
-      setCaloriesConsumed(data.caloriesConsumed || 0);
-      setProteinConsumed(data.proteinConsumed || 0);
-      setTodayMeals(data.todayMeals || []);
-      setHistoricalData(data.historicalData || []);
+        setCalorieGoal(data.calorieGoal || 2000);
+        setProteinGoal(data.proteinGoal || 150);
+        setCaloriesConsumed(data.caloriesConsumed || 0);
+        setProteinConsumed(data.proteinConsumed || 0);
+        setGoalType(data.goalType || 'bulk');
+        setTodayMeals(data.todayMeals || []);
+        setHistoricalData(data.historicalData || []);
     }
   }, []);
 
@@ -176,6 +178,7 @@ const Index = () => {
         proteinGoal,
         caloriesConsumed,
         proteinConsumed,
+        goalType,
         todayMeals,
         historicalData: updatedHistoricalData
       };
@@ -324,6 +327,7 @@ const Index = () => {
     setProteinGoal(150);
     setCaloriesConsumed(0);
     setProteinConsumed(0);
+    setGoalType('bulk');
     setTodayMeals([]);
     setHistoricalData([]);
     setCurrentView('dashboard');
@@ -432,6 +436,24 @@ const Index = () => {
                 />
                 <p className="text-xs text-muted-foreground mt-1">Recommended: 0.8-2g per kg body weight</p>
               </div>
+              
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Fitness Goal
+                </label>
+                <Select value={goalType} onValueChange={(value: 'bulk' | 'cut') => setGoalType(value)}>
+                  <SelectTrigger className="bg-background/50 border-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bulk">🏋️ Bulk (Gain Weight)</SelectItem>
+                    <SelectItem value="cut">✂️ Cut (Lose Weight)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {goalType === 'bulk' ? 'Focus on eating above your calorie goal' : 'Focus on staying below your calorie goal'}
+                </p>
+              </div>
             </div>
             
             <Button 
@@ -473,9 +495,41 @@ const Index = () => {
         {currentView === 'dashboard' && (
           <>
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {/* Goal Type */}
+              <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Scale className="h-4 w-4" />
+                    Fitness Goal
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{goalType === 'bulk' ? '🏋️' : '✂️'}</span>
+                      <span className="text-lg font-bold text-purple-600 dark:text-purple-400 capitalize">{goalType}</span>
+                    </div>
+                    <Select value={goalType} onValueChange={(value: 'bulk' | 'cut') => setGoalType(value)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bulk">🏋️ Bulk</SelectItem>
+                        <SelectItem value="cut">✂️ Cut</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Calorie Progress */}
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <Card className={`bg-gradient-to-br shadow-lg hover:shadow-xl transition-all duration-300 ${
+                (goalType === 'bulk' && caloriesConsumed < calorieGoal) || 
+                (goalType === 'cut' && caloriesConsumed > calorieGoal)
+                  ? 'from-red-500/10 to-red-500/5 border-red-500/20' 
+                  : 'from-primary/10 to-primary/5 border-primary/20'
+              }`}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Target className="h-4 w-4" />
@@ -485,15 +539,31 @@ const Index = () => {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-3xl font-bold text-primary">{caloriesConsumed.toFixed(0)}</span>
+                      <span className={`text-3xl font-bold ${
+                        (goalType === 'bulk' && caloriesConsumed < calorieGoal) || 
+                        (goalType === 'cut' && caloriesConsumed > calorieGoal)
+                          ? 'text-red-600' 
+                          : 'text-primary'
+                      }`}>{caloriesConsumed.toFixed(0)}</span>
                       <span className="text-lg text-foreground">/ {calorieGoal}</span>
                     </div>
                     <Progress 
                       value={(caloriesConsumed / calorieGoal) * 100} 
                       className="h-3"
                     />
-                    <p className="text-sm text-foreground/80">
+                    <p className={`text-sm ${
+                      (goalType === 'bulk' && caloriesConsumed < calorieGoal) || 
+                      (goalType === 'cut' && caloriesConsumed > calorieGoal)
+                        ? 'text-red-600 font-semibold' 
+                        : 'text-foreground/80'
+                    }`}>
                       {((caloriesConsumed / calorieGoal) * 100).toFixed(1)}% of daily goal
+                      {goalType === 'bulk' && caloriesConsumed < calorieGoal && (
+                        <span className="block text-xs">⚠️ Below goal for bulking</span>
+                      )}
+                      {goalType === 'cut' && caloriesConsumed > calorieGoal && (
+                        <span className="block text-xs">⚠️ Above goal for cutting</span>
+                      )}
                     </p>
                   </div>
                 </CardContent>

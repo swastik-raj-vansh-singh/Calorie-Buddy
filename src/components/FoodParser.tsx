@@ -135,6 +135,32 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     setIsParsing(true);
     
     try {
+      // Check if it's a single food item or multiple
+      const isSingleItem = !foodDescription.includes(' and ') && 
+                          !foodDescription.includes(',') && 
+                          !foodDescription.includes(' with ') &&
+                          foodDescription.split(' ').length <= 3;
+
+      if (isSingleItem) {
+        // Handle single food item directly with smart unit detection
+        const smartUnit = getSmartUnitForFood(foodDescription.trim());
+        const singleItem = {
+          name: foodDescription.trim(),
+          unit: smartUnit.unit,
+          hasQuantity: false,
+          weight: undefined,
+          prompt: smartUnit.prompt,
+          dropdownOptions: smartUnit.dropdownOptions
+        };
+        
+        setParsedItems([singleItem]);
+        setItemWeights({ [singleItem.name]: '' });
+        setSelectedUnits({ [singleItem.name]: singleItem.unit });
+        setHasParsed(true);
+        setIsParsing(false);
+        return;
+      }
+
       const parsePrompt = `
       The user said: "${foodDescription}".
       

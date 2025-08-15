@@ -27,7 +27,26 @@ export const HelpSection: React.FC = () => {
       return;
     }
 
-    // Save to localStorage for now (in real app, would send to backend)
+    // Prepare email content
+    const emailSubject = `Food Suggestion: ${foodName}`;
+    const emailBody = `Hi,
+
+I would like to suggest adding "${foodName}" to the CalorieBuddy food database.
+
+${comment ? `Additional details: ${comment}` : ''}
+
+Date: ${new Date().toLocaleDateString()}
+
+Best regards,
+A CalorieBuddy user`;
+
+    // Create mailto link
+    const mailtoLink = `mailto:swastikrajvanshsingh0@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    // Open email client
+    window.location.href = mailtoLink;
+
+    // Save to localStorage for tracking
     const existingSuggestions = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
     const newSuggestions = [...existingSuggestions, {
       food: foodName,
@@ -38,8 +57,8 @@ export const HelpSection: React.FC = () => {
     setSuggestions(newSuggestions);
 
     toast({
-      title: "Thank you!",
-      description: "Your food suggestion has been submitted.",
+      title: "Email opened!",
+      description: "Your default email app should open with the suggestion ready to send.",
     });
 
     setFoodName('');
@@ -96,8 +115,11 @@ export const HelpSection: React.FC = () => {
               disabled={!foodName.trim()}
             >
               <Send className="h-4 w-4 mr-2" />
-              Submit Suggestion
+              Email Suggestion
             </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              This will open your email app with a pre-filled message to send to swastikrajvanshsingh0@gmail.com
+            </p>
           </CardContent>
         </Card>
 
