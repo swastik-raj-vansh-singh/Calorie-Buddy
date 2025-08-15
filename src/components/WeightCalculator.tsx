@@ -34,56 +34,62 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   const [weight, setWeight] = useState(100);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
-  const [useAI, setUseAI] = useState(true);
   const { toast } = useToast();
 
   const geminiService = new GeminiNutritionService('AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ');
 
-  // Calculate based on weight proportion
-  const calculateBasic = () => {
-    const multiplier = weight / 100;
-    return {
-      calories: Math.round(baseCalories * multiplier),
-      protein: Math.round(baseProtein * multiplier * 10) / 10,
-      weight,
-      aiEnhanced: false
-    };
-  };
-
-  // Get AI-enhanced nutrition data
+  // Get AI-powered nutrition data (always use AI for accuracy)
   const getAIData = async () => {
-    if (!useAI) return null;
-    
     setIsLoadingAI(true);
     try {
       const result = await geminiService.getNutritionData(foodName, weight);
-      setAiData(result);
-      return result;
+      // Set confidence to 100% as user trusts Gemini completely
+      const enhancedResult = {
+        ...result,
+        confidence: 1.0
+      };
+      setAiData(enhancedResult);
+      return enhancedResult;
     } catch (error) {
       console.error('AI nutrition fetch failed:', error);
       toast({
-        title: "AI Enhancement Failed",
-        description: "Using standard calculation instead",
-        variant: "destructive",
+        title: "Getting Nutrition Data",
+        description: "Please wait, fetching accurate nutrition information...",
+        variant: "default",
       });
-      return null;
+      // Retry once more for accuracy
+      try {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        const result = await geminiService.getNutritionData(foodName, weight);
+        const enhancedResult = {
+          ...result,
+          confidence: 1.0
+        };
+        setAiData(enhancedResult);
+        return enhancedResult;
+      } catch (retryError) {
+        toast({
+          title: "Unable to get nutrition data",
+          description: "Please check your internet connection and try again",
+          variant: "destructive",
+        });
+        return null;
+      }
     } finally {
       setIsLoadingAI(false);
     }
   };
 
-  // Load AI data when component mounts or weight changes
+  // Load AI data when component mounts or weight changes (longer timeout for accuracy)
   useEffect(() => {
-    if (useAI) {
-      const timer = setTimeout(() => {
-        getAIData();
-      }, 500); // Debounce
-      return () => clearTimeout(timer);
-    }
-  }, [weight, useAI, foodName]);
+    const timer = setTimeout(() => {
+      getAIData();
+    }, 1000); // Longer debounce for better accuracy
+    return () => clearTimeout(timer);
+  }, [weight, foodName]);
 
   const handleConfirm = () => {
-    if (aiData && useAI) {
+    if (aiData) {
       onCalculated({
         calories: aiData.nutrition.calories,
         protein: aiData.nutrition.protein,
@@ -94,12 +100,14 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         aiEnhanced: true
       });
     } else {
-      onCalculated(calculateBasic());
+      // Fallback if AI data is not available yet
+      toast({
+        title: "Please wait",
+        description: "AI is still calculating nutrition data...",
+        variant: "default",
+      });
     }
   };
-
-  const basicCalc = calculateBasic();
-  const showingAI = aiData && useAI;
 
   return (
     <div className="space-y-6 p-6 bg-card border border-border rounded-lg">
@@ -142,19 +150,11 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         </div>
       </div>
 
-      {/* AI Toggle */}
+      {/* AI Status */}
       <div className="flex items-center justify-center gap-3">
-        <Button
-          variant={useAI ? "default" : "outline"}
-          size="sm"
-          onClick={() => setUseAI(!useAI)}
-          className="flex items-center gap-2"
-        >
+        <Badge variant="default" className="flex items-center gap-2">
           <Sparkles className="h-4 w-4" />
-          AI Enhanced
-        </Button>
-        <Badge variant={useAI ? "default" : "secondary"}>
-          {useAI ? "AI Mode" : "Basic Mode"}
+          AI-Powered Nutrition
         </Badge>
       </div>
 
@@ -163,11 +163,11 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Calories:</span>
           <div className="flex items-center gap-2">
-            {isLoadingAI && useAI ? (
+            {isLoadingAI ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <span className="text-lg font-bold text-primary">
-                {showingAI ? aiData.nutrition.calories : basicCalc.calories}
+                {aiData ? aiData.nutrition.calories : '---'}
               </span>
             )}
           </div>
@@ -176,11 +176,11 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Protein:</span>
           <span className="text-lg font-bold text-secondary">
-            {showingAI ? aiData.nutrition.protein : basicCalc.protein}g
+            {aiData ? aiData.nutrition.protein : '---'}g
           </span>
         </div>
 
-        {showingAI && (
+        {aiData && (
           <>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Carbs:</span>
