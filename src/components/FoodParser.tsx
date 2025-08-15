@@ -3,16 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GeminiNutritionService } from '@/services/geminiService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, X } from 'lucide-react';
 
 interface ParsedFoodItem {
   name: string;
-  type: 'solid' | 'liquid' | 'spice';
   unit: string;
   weight?: number;
   hasQuantity: boolean;
+  prompt: string;
+  dropdownOptions: string[];
 }
 
 interface FoodParserProps {
@@ -29,13 +31,103 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   selectedMealType
 }) => {
   const [parsedItems, setParsedItems] = useState<ParsedFoodItem[]>([]);
-  const [itemWeights, setItemWeights] = useState<Record<string, number>>({});
+  const [itemWeights, setItemWeights] = useState<Record<string, string>>({});
+  const [selectedUnits, setSelectedUnits] = useState<Record<string, string>>({});
   const [isParsing, setIsParsing] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [hasParsed, setHasParsed] = useState(false);
   const { toast } = useToast();
 
   const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
+
+  // Smart unit detection logic
+  const getSmartUnitForFood = (foodName: string): { unit: string; prompt: string; dropdownOptions: string[] } => {
+    const food = foodName.toLowerCase();
+    
+    // Drinks/Liquids
+    if (food.includes('coke') || food.includes('cola') || food.includes('juice') || 
+        food.includes('milk') || food.includes('water') || food.includes('tea') || 
+        food.includes('coffee') || food.includes('beer') || food.includes('wine') || 
+        food.includes('soda') || food.includes('drink')) {
+      return {
+        unit: 'ml',
+        prompt: `How many milliliters of ${foodName} did you have?`,
+        dropdownOptions: ['ml', 'grams', 'quantity', 'slices', 'size', 'teaspoon']
+      };
+    }
+    
+    // Pizza
+    if (food.includes('pizza')) {
+      return {
+        unit: 'size',
+        prompt: `What was the pizza size?`,
+        dropdownOptions: ['small', 'medium', 'regular', 'large']
+      };
+    }
+    
+    // Counted items
+    if (food.includes('gulab jamun') || food.includes('samosa') || food.includes('dosa') || 
+        food.includes('egg') || food.includes('banana') || food.includes('apple') || 
+        food.includes('chole bhature') || food.includes('idli') || food.includes('vada') ||
+        food.includes('paratha') || food.includes('naan') || food.includes('chapati') ||
+        food.includes('roti')) {
+      return {
+        unit: 'quantity',
+        prompt: `How many ${foodName}s did you have?`,
+        dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+      };
+    }
+    
+    // Cheese
+    if (food.includes('cheese')) {
+      return {
+        unit: 'slices',
+        prompt: `How many slices of ${foodName} did you have?`,
+        dropdownOptions: ['slices', 'grams', 'ml', 'quantity', 'size', 'teaspoon']
+      };
+    }
+    
+    // Ice cream (detect type)
+    if (food.includes('ice cream')) {
+      if (food.includes('cone')) {
+        return {
+          unit: 'quantity',
+          prompt: `How many ice cream cones did you have?`,
+          dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+        };
+      } else if (food.includes('tub') || food.includes('container')) {
+        return {
+          unit: 'grams',
+          prompt: `How many grams of ${foodName} did you have?`,
+          dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
+        };
+      } else {
+        return {
+          unit: 'quantity',
+          prompt: `How many servings of ${foodName} did you have?`,
+          dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+        };
+      }
+    }
+    
+    // Spices and condiments
+    if (food.includes('sugar') || food.includes('salt') || food.includes('oil') || 
+        food.includes('honey') || food.includes('jam') || food.includes('sauce') ||
+        food.includes('spice') || food.includes('masala') || food.includes('powder')) {
+      return {
+        unit: 'teaspoon',
+        prompt: `How many teaspoons of ${foodName} did you use?`,
+        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'size']
+      };
+    }
+    
+    // Default to grams for solids
+    return {
+      unit: 'grams',
+      prompt: `How many grams of ${foodName} did you have?`,
+      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
+    };
+  };
 
   const parseDescription = async () => {
     if (!foodDescription.trim()) return;
@@ -46,24 +138,8 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       const parsePrompt = `
       The user said: "${foodDescription}".
       
-      Break this down into individual food components.
-      For each food item:
-      - If it's a liquid (e.g., Coke, juice, milk, water), classify as "liquid" with unit "ml"
-      - If it's a solid (e.g., pizza, rice, bread), classify as "solid" with unit "g"  
-      - If it's a condiment/spice (e.g., sugar, oil, salt), classify as "spice" with unit "tsp"
-      
-      Check if quantity is already mentioned in the description. If yes, extract the weight and set hasQuantity to true.
-      
-      Return ONLY a JSON array in this exact format:
-      [
-        {
-          "name": "food name",
-          "type": "solid|liquid|spice",
-          "unit": "g|ml|tsp",
-          "weight": <number if mentioned, otherwise null>,
-          "hasQuantity": <true if quantity mentioned, false otherwise>
-        }
-      ]
+      Break this down into individual food components and extract just the food names.
+      Return ONLY a JSON array of food names like: ["pizza", "coke", "gulab jamun"]
       `;
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE`, {
@@ -94,24 +170,37 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       
       const text = data.candidates[0].content.parts[0].text;
       
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      const jsonMatch = text.match(/\[[\s\S]*?\]/);
       if (!jsonMatch) {
         throw new Error('Invalid response format');
       }
 
-      const items = JSON.parse(jsonMatch[0]);
-      setParsedItems(items);
+      const foodNames = JSON.parse(jsonMatch[0]);
       
-      // Initialize weights for items that don't have quantity
-      const weights: Record<string, number> = {};
-      items.forEach((item: ParsedFoodItem) => {
-        if (item.hasQuantity && item.weight) {
-          weights[item.name] = item.weight;
-        } else {
-          weights[item.name] = item.type === 'liquid' ? 250 : item.type === 'spice' ? 5 : 100;
-        }
+      // Apply smart unit detection to each food item
+      const smartItems = foodNames.map((name: string) => {
+        const smartUnit = getSmartUnitForFood(name);
+        return {
+          name,
+          unit: smartUnit.unit,
+          hasQuantity: false,
+          weight: undefined,
+          prompt: smartUnit.prompt,
+          dropdownOptions: smartUnit.dropdownOptions
+        };
+      });
+      
+      setParsedItems(smartItems);
+      
+      // Initialize weights and units
+      const weights: Record<string, string> = {};
+      const units: Record<string, string> = {};
+      smartItems.forEach((item: ParsedFoodItem) => {
+        weights[item.name] = '';
+        units[item.name] = item.unit;
       });
       setItemWeights(weights);
+      setSelectedUnits(units);
       setHasParsed(true);
       
     } catch (error) {
@@ -120,32 +209,40 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       // Show user-friendly error message
       toast({
         title: "AI Service Temporarily Unavailable",
-        description: "Please try again in a moment. Meanwhile, you can add individual food items.",
+        description: "Using fallback parsing...",
         variant: "destructive",
       });
       
-      // Fallback: try to parse manually for simple cases
-      const words = foodDescription.toLowerCase().split(' ');
-      const possibleFoods = [];
+      // Fallback: try to parse manually
+      const words = foodDescription.toLowerCase().split(/[\s,]+/);
+      const fallbackItems = [];
       
-      // Simple detection patterns
-      if (words.includes('pizza')) possibleFoods.push({ name: 'pizza', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
-      if (words.includes('coke') || words.includes('cola')) possibleFoods.push({ name: 'coke', type: 'liquid', unit: 'ml', weight: null, hasQuantity: false });
-      if (words.includes('roti') || words.includes('chapati')) possibleFoods.push({ name: 'roti', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
-      if (words.includes('rice')) possibleFoods.push({ name: 'rice', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
-      if (words.includes('dal')) possibleFoods.push({ name: 'dal', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
-      if (words.includes('sabzi') || words.includes('curry')) possibleFoods.push({ name: 'sabzi', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      // Simple detection patterns with smart units
+      if (words.includes('pizza')) {
+        const smartUnit = getSmartUnitForFood('pizza');
+        fallbackItems.push({ name: 'pizza', ...smartUnit, hasQuantity: false, weight: undefined });
+      }
+      if (words.includes('coke') || words.includes('cola')) {
+        const smartUnit = getSmartUnitForFood('coke');
+        fallbackItems.push({ name: 'coke', ...smartUnit, hasQuantity: false, weight: undefined });
+      }
+      if (words.includes('roti') || words.includes('chapati')) {
+        const smartUnit = getSmartUnitForFood('roti');
+        fallbackItems.push({ name: 'roti', ...smartUnit, hasQuantity: false, weight: undefined });
+      }
       
-      if (possibleFoods.length > 0) {
-        setParsedItems(possibleFoods);
-        const weights: Record<string, number> = {};
-        possibleFoods.forEach((item: any) => {
-          weights[item.name] = item.type === 'liquid' ? 250 : 100;
+      if (fallbackItems.length > 0) {
+        setParsedItems(fallbackItems);
+        const weights: Record<string, string> = {};
+        const units: Record<string, string> = {};
+        fallbackItems.forEach((item: any) => {
+          weights[item.name] = '';
+          units[item.name] = item.unit;
         });
         setItemWeights(weights);
+        setSelectedUnits(units);
         setHasParsed(true);
       } else {
-        // If no fallback works, suggest manual entry
         setParsedItems([]);
         setHasParsed(true);
       }
@@ -154,10 +251,17 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     }
   };
 
-  const handleWeightChange = (itemName: string, weight: number) => {
+  const handleWeightChange = (itemName: string, weight: string) => {
     setItemWeights(prev => ({
       ...prev,
       [itemName]: weight
+    }));
+  };
+
+  const handleUnitChange = (itemName: string, unit: string) => {
+    setSelectedUnits(prev => ({
+      ...prev,
+      [itemName]: unit
     }));
   };
 
@@ -168,14 +272,16 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       const calculatedItems = [];
       
       for (const item of parsedItems) {
-        const weight = itemWeights[item.name] || 100;
+        const weightStr = itemWeights[item.name] || '100';
+        const weight = parseFloat(weightStr) || 100;
+        const unit = selectedUnits[item.name] || item.unit;
         
         try {
           const nutritionData = await geminiService.getNutritionData(item.name, weight);
           
           calculatedItems.push({
             id: Date.now() + Math.random(),
-            name: `${item.name} (${weight}${item.unit})`,
+            name: `${item.name} (${weight} ${unit})`,
             calories: nutritionData.nutrition.calories,
             protein: nutritionData.nutrition.protein,
             type: selectedMealType,
@@ -188,16 +294,17 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         } catch (error) {
           console.error(`Error calculating nutrition for ${item.name}:`, error);
           // Add with fallback values
+          const fallbackWeight = Math.max(weight, 1);
           calculatedItems.push({
             id: Date.now() + Math.random(),
-            name: `${item.name} (${weight}${item.unit})`,
-            calories: Math.round((weight / 100) * 200),
-            protein: Math.round((weight / 100) * 8),
+            name: `${item.name} (${weight} ${unit})`,
+            calories: Math.round((fallbackWeight / 100) * 200),
+            protein: Math.round((fallbackWeight / 100) * 8),
             type: selectedMealType,
-            weight,
-            carbs: Math.round((weight / 100) * 25),
-            fat: Math.round((weight / 100) * 5),
-            fiber: Math.round((weight / 100) * 3),
+            weight: fallbackWeight,
+            carbs: Math.round((fallbackWeight / 100) * 25),
+            fat: Math.round((fallbackWeight / 100) * 5),
+            fiber: Math.round((fallbackWeight / 100) * 3),
             aiEnhanced: false
           });
         }
@@ -245,24 +352,58 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="font-medium text-foreground capitalize">{item.name}</h4>
                         <Badge variant="secondary" className="text-xs">
-                          {item.type} • {item.unit}
+                          Smart Unit: {selectedUnits[item.name] || item.unit}
                         </Badge>
                       </div>
                       
-                      {!item.hasQuantity && (
-                        <div className="space-y-2">
-                          <label className="text-sm text-muted-foreground">
-                            Enter quantity ({item.unit}):
-                          </label>
-                          <Input
-                            type="number"
-                            value={itemWeights[item.name] || ''}
-                            onChange={(e) => handleWeightChange(item.name, Number(e.target.value))}
-                            placeholder={`e.g., ${item.type === 'liquid' ? '250' : item.type === 'spice' ? '5' : '100'}`}
-                            className="w-32"
-                          />
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">
+                          {item.prompt}
+                        </label>
+                        
+                        <div className="flex gap-2">
+                          {selectedUnits[item.name] === 'size' ? (
+                            <Select
+                              value={itemWeights[item.name] || ''}
+                              onValueChange={(value) => handleWeightChange(item.name, value)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Select size" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="small">Small</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="regular">Regular</SelectItem>
+                                <SelectItem value="large">Large</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              type="number"
+                              value={itemWeights[item.name] || ''}
+                              onChange={(e) => handleWeightChange(item.name, e.target.value)}
+                              placeholder="Enter amount"
+                              className="w-32"
+                            />
+                          )}
+                          
+                          <Select
+                            value={selectedUnits[item.name] || item.unit}
+                            onValueChange={(value) => handleUnitChange(item.name, value)}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {item.dropdownOptions.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      )}
+                      </div>
                       
                       {item.hasQuantity && (
                         <div className="text-sm text-green-600 flex items-center gap-1">
