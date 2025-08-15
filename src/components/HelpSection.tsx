@@ -85,8 +85,7 @@ export const HelpSection: React.FC = () => {
               {isSubmitting ? "Sending..." : "Send Suggestion"}
             </Button>
             <div className="text-xs text-muted-foreground text-center space-y-1">
-              <p>Email is sent to swastikrajvanshsingh
-0@gmail.com</p>
+              <p>Email is sent to swastikrajvanshsingh0@gmail.com</p>
             </div>
           </CardContent>
         </Card>
