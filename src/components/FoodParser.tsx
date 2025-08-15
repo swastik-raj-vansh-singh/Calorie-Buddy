@@ -81,6 +81,17 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       });
 
       const data = await response.json();
+      
+      // Handle API errors
+      if (data.error) {
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
+      
+      // Check if the response has the expected structure
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+      
       const text = data.candidates[0].content.parts[0].text;
       
       const jsonMatch = text.match(/\[[\s\S]*\]/);
@@ -105,6 +116,39 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       
     } catch (error) {
       console.error('Error parsing food description:', error);
+      
+      // Show user-friendly error message
+      toast({
+        title: "AI Service Temporarily Unavailable",
+        description: "Please try again in a moment. Meanwhile, you can add individual food items.",
+        variant: "destructive",
+      });
+      
+      // Fallback: try to parse manually for simple cases
+      const words = foodDescription.toLowerCase().split(' ');
+      const possibleFoods = [];
+      
+      // Simple detection patterns
+      if (words.includes('pizza')) possibleFoods.push({ name: 'pizza', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      if (words.includes('coke') || words.includes('cola')) possibleFoods.push({ name: 'coke', type: 'liquid', unit: 'ml', weight: null, hasQuantity: false });
+      if (words.includes('roti') || words.includes('chapati')) possibleFoods.push({ name: 'roti', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      if (words.includes('rice')) possibleFoods.push({ name: 'rice', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      if (words.includes('dal')) possibleFoods.push({ name: 'dal', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      if (words.includes('sabzi') || words.includes('curry')) possibleFoods.push({ name: 'sabzi', type: 'solid', unit: 'g', weight: null, hasQuantity: false });
+      
+      if (possibleFoods.length > 0) {
+        setParsedItems(possibleFoods);
+        const weights: Record<string, number> = {};
+        possibleFoods.forEach((item: any) => {
+          weights[item.name] = item.type === 'liquid' ? 250 : 100;
+        });
+        setItemWeights(weights);
+        setHasParsed(true);
+      } else {
+        // If no fallback works, suggest manual entry
+        setParsedItems([]);
+        setHasParsed(true);
+      }
     } finally {
       setIsParsing(false);
     }

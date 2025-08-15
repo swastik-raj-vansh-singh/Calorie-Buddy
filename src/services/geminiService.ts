@@ -62,6 +62,12 @@ export class GeminiNutritionService {
       }
 
       const data = await response.json();
+      
+      // Check if the response has the expected structure
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+      
       const text = data.candidates[0].content.parts[0].text;
       
       // Extract JSON from response
