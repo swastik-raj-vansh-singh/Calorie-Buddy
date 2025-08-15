@@ -81,12 +81,6 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       });
 
       const data = await response.json();
-      
-      // Check if response has the expected structure
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        throw new Error('Invalid API response structure');
-      }
-      
       const text = data.candidates[0].content.parts[0].text;
       
       const jsonMatch = text.match(/\[[\s\S]*\]/);
