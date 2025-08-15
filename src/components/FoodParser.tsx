@@ -303,7 +303,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         const unit = selectedUnits[item.name] || item.unit;
         
         try {
-          const nutritionData = await geminiService.getNutritionData(item.name, weight);
+          const nutritionData = await geminiService.getNutritionData(item.name, weight, unit);
           
           calculatedItems.push({
             id: Date.now() + Math.random(),

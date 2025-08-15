@@ -21,9 +21,93 @@ export class GeminiNutritionService {
     this.apiKey = apiKey;
   }
 
-  async getNutritionData(foodName: string, weight: number = 100): Promise<GeminiNutritionResponse> {
-    const prompt = `
-    Please provide accurate nutrition information for ${weight}g of "${foodName}".
+  private createContextAwarePrompt(foodName: string, weight: number, unit: string): string {
+    let quantityDescription: string;
+    let contextualPrompt: string;
+
+    // Create natural quantity descriptions based on unit
+    switch (unit.toLowerCase()) {
+      case 'quantity':
+        quantityDescription = `${weight} ${weight === 1 ? 'piece' : 'pieces'} of ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Important context:
+        - This is ${weight} individual ${weight === 1 ? 'item' : 'items'} of ${foodName}
+        - For foods like roti, chapati, samosa, idli, dosa etc., calculate based on standard/typical size
+        - For items like pizza, consider it as ${weight} ${weight === 1 ? 'slice' : 'slices'} of medium pizza unless specified otherwise
+        - Don't convert to weight - calculate nutrition for the actual ${weight} ${weight === 1 ? 'piece' : 'pieces'}
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+
+      case 'size':
+        quantityDescription = `${weight} ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Important context:
+        - This refers to size-based portions (small/medium/large)
+        - For pizza: calculate for the specified size (small = ~200g slice, medium = ~300g slice, large = ~400g slice)
+        - For other items, use standard size portions
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+
+      case 'slices':
+        quantityDescription = `${weight} ${weight === 1 ? 'slice' : 'slices'} of ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Important context:
+        - This is ${weight} standard ${weight === 1 ? 'slice' : 'slices'} of ${foodName}
+        - Use typical slice thickness and size for the food item
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+
+      case 'ml':
+        quantityDescription = `${weight}ml of ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Important context:
+        - This is a liquid measurement
+        - Calculate based on the liquid volume, not weight
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+
+      case 'teaspoon':
+        quantityDescription = `${weight} ${weight === 1 ? 'teaspoon' : 'teaspoons'} of ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Important context:
+        - This is a volume measurement (1 teaspoon ≈ 5ml)
+        - Usually used for spices, sugar, oil, etc.
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+
+      case 'grams':
+      default:
+        quantityDescription = `${weight}g of ${foodName}`;
+        contextualPrompt = `
+        I need accurate nutrition information for ${quantityDescription}.
+        
+        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        `;
+        break;
+    }
+
+    return `
+    ${contextualPrompt}
     
     Return ONLY a JSON object in this exact format:
     {
@@ -40,7 +124,14 @@ export class GeminiNutritionService {
     
     Ensure all values are accurate and based on reliable nutrition databases like USDA. 
     For Indian foods, use authentic recipes and ingredients.
+    Be precise with portion sizes - ${quantityDescription} should give realistic, accurate values.
     `;
+  }
+
+  async getNutritionData(foodName: string, weight: number = 100, unit: string = 'grams'): Promise<GeminiNutritionResponse> {
+    const prompt = this.createContextAwarePrompt(foodName, weight, unit);
+    
+    console.log('Gemini API Request:', { foodName, weight, unit, prompt });
 
     try {
       const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
@@ -80,18 +171,56 @@ export class GeminiNutritionService {
       return nutritionData;
     } catch (error) {
       console.error('Error fetching nutrition data:', error);
-      // Fallback to estimated values
-      return {
-        nutrition: {
-          calories: Math.round((weight / 100) * 200), // Rough estimate
-          protein: Math.round((weight / 100) * 8),
-          carbs: Math.round((weight / 100) * 25),
-          fat: Math.round((weight / 100) * 5),
-          fiber: Math.round((weight / 100) * 3),
-          sugar: Math.round((weight / 100) * 5)
-        },
-        confidence: 0.5
-      };
+      // Unit-aware fallback estimation
+      return this.getUnitAwareFallback(foodName, weight, unit);
     }
+  }
+
+  private getUnitAwareFallback(foodName: string, weight: number, unit: string): GeminiNutritionResponse {
+    let multiplier: number;
+
+    switch (unit.toLowerCase()) {
+      case 'quantity':
+        // For discrete items, use realistic per-piece estimates
+        if (foodName.toLowerCase().includes('roti') || foodName.toLowerCase().includes('chapati')) {
+          multiplier = weight * 80; // ~80 calories per roti
+        } else if (foodName.toLowerCase().includes('pizza')) {
+          multiplier = weight * 250; // ~250 calories per slice
+        } else if (foodName.toLowerCase().includes('samosa')) {
+          multiplier = weight * 150; // ~150 calories per samosa
+        } else {
+          multiplier = weight * 100; // Generic fallback per piece
+        }
+        break;
+      
+      case 'teaspoon':
+        multiplier = weight * 4; // ~4 calories per teaspoon (varies by food)
+        break;
+      
+      case 'ml':
+        multiplier = weight * 0.5; // ~0.5 calories per ml (varies by liquid)
+        break;
+      
+      case 'slices':
+        multiplier = weight * 50; // ~50 calories per slice (varies by food)
+        break;
+      
+      case 'grams':
+      default:
+        multiplier = (weight / 100) * 200; // Standard per 100g estimation
+        break;
+    }
+
+    return {
+      nutrition: {
+        calories: Math.round(multiplier),
+        protein: Math.round(multiplier * 0.1), // ~10% protein
+        carbs: Math.round(multiplier * 0.15), // ~15% carbs  
+        fat: Math.round(multiplier * 0.05), // ~5% fat
+        fiber: Math.round(multiplier * 0.03), // ~3% fiber
+        sugar: Math.round(multiplier * 0.05) // ~5% sugar
+      },
+      confidence: 0.3 // Low confidence for fallback
+    };
   }
 }

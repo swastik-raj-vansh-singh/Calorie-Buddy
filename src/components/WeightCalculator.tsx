@@ -122,7 +122,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
     setIsLoadingAI(true);
     try {
       const numericWeight = getNumericWeight();
-      const result = await geminiService.getNutritionData(foodName, numericWeight);
+      const result = await geminiService.getNutritionData(foodName, numericWeight, selectedUnit);
       // Set confidence to 100% as user trusts Gemini completely
       const enhancedResult = {
         ...result,
@@ -136,7 +136,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       try {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         const numericWeight = getNumericWeight();
-        const result = await geminiService.getNutritionData(foodName, numericWeight);
+        const result = await geminiService.getNutritionData(foodName, numericWeight, selectedUnit);
         const enhancedResult = {
           ...result,
           confidence: 1.0
@@ -157,7 +157,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       getAIData();
     }, 1000); // Longer debounce for better accuracy
     return () => clearTimeout(timer);
-  }, [weight, foodName]);
+  }, [weight, foodName, selectedUnit]);
 
   const handleConfirm = () => {
     if (aiData) {
