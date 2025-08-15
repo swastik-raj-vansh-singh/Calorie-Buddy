@@ -40,11 +40,27 @@ Date: ${new Date().toLocaleDateString()}
 Best regards,
 A CalorieBuddy user`;
 
-    // Create mailto link
+    // Copy to clipboard as fallback
+    const emailContent = `To: swastikrajvanshsingh0@gmail.com
+Subject: ${emailSubject}
+
+${emailBody}`;
+
+    navigator.clipboard.writeText(emailContent).then(() => {
+      toast({
+        title: "Email content copied!",
+        description: "Email details copied to clipboard. You can paste this into your email app.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Manual email required",
+        description: "Please manually send an email to swastikrajvanshsingh0@gmail.com with your suggestion.",
+      });
+    });
+
+    // Try mailto as secondary option
     const mailtoLink = `mailto:swastikrajvanshsingh0@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    
-    // Open email client
-    window.location.href = mailtoLink;
+    window.open(mailtoLink, '_blank');
 
     // Save to localStorage for tracking
     const existingSuggestions = JSON.parse(localStorage.getItem('foodSuggestions') || '[]');
@@ -55,11 +71,6 @@ A CalorieBuddy user`;
     }];
     localStorage.setItem('foodSuggestions', JSON.stringify(newSuggestions));
     setSuggestions(newSuggestions);
-
-    toast({
-      title: "Email opened!",
-      description: "Your default email app should open with the suggestion ready to send.",
-    });
 
     setFoodName('');
     setComment('');
@@ -76,6 +87,33 @@ A CalorieBuddy user`;
         <h2 className="text-3xl font-bold text-foreground mb-2">🤝 Help & Suggestions</h2>
         <p className="text-muted-foreground">Help us improve by suggesting missing foods or sharing feedback</p>
       </div>
+
+      {/* Recent Suggestions - Moved to top */}
+      {suggestions.length > 0 && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50 mb-6">
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Your Recent Suggestions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {suggestions.slice(-5).reverse().map((suggestion, index) => (
+                <div key={index} className="border border-border/50 rounded-lg p-3 bg-background/30">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-foreground">{suggestion.food}</h4>
+                    <span className="text-xs text-muted-foreground">{suggestion.date}</span>
+                  </div>
+                  {suggestion.comment && (
+                    <p className="text-sm text-muted-foreground">{suggestion.comment}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Submit Food Suggestion */}
@@ -115,11 +153,14 @@ A CalorieBuddy user`;
               disabled={!foodName.trim()}
             >
               <Send className="h-4 w-4 mr-2" />
-              Email Suggestion
+              Send Suggestion
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              This will open your email app with a pre-filled message to send to swastikrajvanshsingh0@gmail.com
-            </p>
+            <div className="text-xs text-muted-foreground text-center space-y-1">
+              <p><strong>Steps to send:</strong></p>
+              <p>1. Click button to copy email content</p>
+              <p>2. Open your email app (Gmail, Outlook, etc.)</p>
+              <p>3. Paste and send to: <strong>swastikrajvanshsingh0@gmail.com</strong></p>
+            </div>
           </CardContent>
         </Card>
 
@@ -168,33 +209,6 @@ A CalorieBuddy user`;
             </div>
           </CardContent>
         </Card>
-
-        {/* Recent Suggestions */}
-        {suggestions.length > 0 && (
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50 md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Your Recent Suggestions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {suggestions.slice(-5).reverse().map((suggestion, index) => (
-                  <div key={index} className="border border-border/50 rounded-lg p-3 bg-background/30">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-foreground">{suggestion.food}</h4>
-                      <span className="text-xs text-muted-foreground">{suggestion.date}</span>
-                    </div>
-                    {suggestion.comment && (
-                      <p className="text-sm text-muted-foreground">{suggestion.comment}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
