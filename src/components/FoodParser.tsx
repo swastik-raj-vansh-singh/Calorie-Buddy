@@ -38,7 +38,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   const [hasParsed, setHasParsed] = useState(false);
   const { toast } = useToast();
 
-  const geminiService = new GeminiNutritionService('AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE');
+  const geminiService = new GeminiNutritionService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
 
   // Smart unit detection logic
   const getSmartUnitForFood = (foodName: string): { unit: string; prompt: string; dropdownOptions: string[] } => {
@@ -168,7 +168,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       Return ONLY a JSON array of food names like: ["pizza", "coke", "gulab jamun"]
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
