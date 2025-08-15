@@ -57,6 +57,72 @@ const Index = () => {
   // Initialize Gemini service
   const geminiService = new GeminiNutritionService('AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ');
 
+  // Show calorie consumption alert with motivational messages
+  const showCalorieConsumptionAlert = (consumedCalories: number, consumedProtein: number, totalCalories: number) => {
+    const remainingCalories = calorieGoal - totalCalories;
+    const remainingProtein = proteinGoal - proteinConsumed - consumedProtein;
+    
+    let title = "";
+    let description = "";
+    
+    if (totalCalories > calorieGoal * 1.2) {
+      // Overconsumption warning
+      title = "⚠️ High Calorie Intake!";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your daily goal. Consider lighter meals for the rest of the day.`;
+    } else if (totalCalories > calorieGoal) {
+      // Slightly over goal
+      title = "🎯 Goal Exceeded";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). You're ${Math.abs(remainingCalories)} calories over your goal. Great progress on nutrition!`;
+    } else {
+      // Within goal
+      title = "✅ Meal Added Successfully!";
+      description = `You've consumed ${consumedCalories} calories (${consumedProtein}g protein). ${remainingCalories} calories remaining for today. Keep it up! 💪`;
+    }
+
+    // Custom alert dialog instead of toast
+    const alertDialog = document.createElement('div');
+    alertDialog.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
+    alertDialog.innerHTML = `
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mx-4 max-w-md shadow-xl border">
+        <div class="text-center space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${title}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">${description}</p>
+          <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors">
+            Got it!
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(alertDialog);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (alertDialog.parentNode) {
+        alertDialog.remove();
+      }
+    }, 5000);
+  };
+
+  // Handle quick meal suggestion click
+  const handleQuickSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setIsAddingMeal(false);
+    
+    // Check if the suggestion contains multiple food items
+    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
+    const isComplexDescription = complexIndicators.some(indicator => 
+      suggestion.toLowerCase().includes(indicator)
+    ) || suggestion.split(' ').length > 3;
+
+    if (isComplexDescription) {
+      setShowFoodParser(true);
+    } else {
+      setSelectedFoodName(suggestion);
+      setShowWeightCalculator(true);
+    }
+  };
+
   // Check mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -123,20 +189,11 @@ const Index = () => {
       setUserName(tempUserName.trim());
       setIsWelcome(false);
       setIsOnboarding(true);
-    } else {
-      toast({
-        title: "Please enter your name",
-        variant: "destructive",
-      });
     }
   };
 
   const handleOnboardingComplete = () => {
     setIsOnboarding(false);
-    toast({
-      title: "Welcome to CalorieBuddy! 🎉",
-      description: "Start tracking your meals to reach your goals.",
-    });
   };
 
   const handleQuickAdd = (mealType: string) => {
@@ -147,11 +204,6 @@ const Index = () => {
   // Handle food search with AI - check if it's a complex description
   const handleFoodSearch = async () => {
     if (!searchTerm.trim()) {
-      toast({
-        title: "Please enter a food item",
-        description: "Type the name of the food you want to add",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -184,14 +236,16 @@ const Index = () => {
     calories: number;
     protein: number;
     weight: number;
+    unit?: string;
     carbs?: number;
     fat?: number;
     fiber?: number;
     aiEnhanced: boolean;
   }) => {
+    const unit = data.unit || 'g';
     const newMeal: Meal = {
       id: Date.now(),
-      name: `${selectedFoodName} (${data.weight}g)`,
+      name: `${selectedFoodName} (${data.weight}${unit})`,
       calories: data.calories,
       protein: data.protein,
       type: selectedMealType,
@@ -202,17 +256,18 @@ const Index = () => {
       aiEnhanced: data.aiEnhanced
     };
 
+    const newCaloriesConsumed = caloriesConsumed + data.calories;
+    const newProteinConsumed = proteinConsumed + data.protein;
+    
     setTodayMeals([...todayMeals, newMeal]);
-    setCaloriesConsumed(caloriesConsumed + data.calories);
-    setProteinConsumed(proteinConsumed + data.protein);
+    setCaloriesConsumed(newCaloriesConsumed);
+    setProteinConsumed(newProteinConsumed);
     setShowWeightCalculator(false);
     setSelectedFoodName('');
     setSearchTerm('');
 
-    toast({
-      title: `Meal Added! 🤖`,
-      description: `${selectedFoodName} (${data.weight}g) added to ${selectedMealType} with AI nutrition data`,
-    });
+    // Show calorie consumption popup
+    showCalorieConsumptionAlert(data.calories, data.protein, newCaloriesConsumed);
   };
 
   // Handle multiple items from food parser
@@ -220,11 +275,17 @@ const Index = () => {
     const totalCalories = items.reduce((sum, item) => sum + item.calories, 0);
     const totalProtein = items.reduce((sum, item) => sum + item.protein, 0);
     
+    const newCaloriesConsumed = caloriesConsumed + totalCalories;
+    const newProteinConsumed = proteinConsumed + totalProtein;
+    
     setTodayMeals([...todayMeals, ...items]);
-    setCaloriesConsumed(caloriesConsumed + totalCalories);
-    setProteinConsumed(proteinConsumed + totalProtein);
+    setCaloriesConsumed(newCaloriesConsumed);
+    setProteinConsumed(newProteinConsumed);
     setShowFoodParser(false);
     setSearchTerm('');
+
+    // Show calorie consumption popup
+    showCalorieConsumptionAlert(totalCalories, totalProtein, newCaloriesConsumed);
   };
 
   // Handle image recognition result
@@ -267,10 +328,6 @@ const Index = () => {
     setHistoricalData([]);
     setCurrentView('dashboard');
     setShowResetDialog(false);
-    toast({
-      title: "Data Reset Complete!",
-      description: "Starting fresh with new goals.",
-    });
   };
 
   // Welcome Screen
@@ -705,10 +762,7 @@ const Index = () => {
                       key={index}
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setSearchTerm(suggestion);
-                        handleFoodSearch();
-                      }}
+                      onClick={() => handleQuickSuggestionClick(suggestion)}
                       className="justify-start text-left hover:bg-primary/5 border-border/50 text-foreground text-xs"
                     >
                       {suggestion}

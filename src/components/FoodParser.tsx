@@ -103,17 +103,8 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       setItemWeights(weights);
       setHasParsed(true);
       
-      toast({
-        title: "Food items parsed! 🎯",
-        description: `Found ${items.length} food item(s) in your description`,
-      });
     } catch (error) {
       console.error('Error parsing food description:', error);
-      toast({
-        title: "Parsing failed",
-        description: "Could not parse food items. Please try again.",
-        variant: "destructive"
-      });
     } finally {
       setIsParsing(false);
     }
@@ -170,17 +161,8 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       
       onItemsCalculated(calculatedItems);
       
-      toast({
-        title: "All items calculated! 🤖",
-        description: `Added ${calculatedItems.length} food items with AI nutrition data`,
-      });
     } catch (error) {
       console.error('Error calculating nutrition:', error);
-      toast({
-        title: "Calculation failed",
-        description: "Could not calculate nutrition. Please try again.",
-        variant: "destructive"
-      });
     } finally {
       setIsCalculating(false);
     }

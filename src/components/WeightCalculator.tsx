@@ -16,6 +16,7 @@ interface WeightCalculatorProps {
     calories: number;
     protein: number;
     weight: number;
+    unit?: string;
     carbs?: number;
     fat?: number;
     fiber?: number;
@@ -31,7 +32,32 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   onCalculated,
   onCancel
 }) => {
-  const [weight, setWeight] = useState(100);
+  // Detect food type and set appropriate unit and default weight
+  const detectFoodType = (name: string) => {
+    const lowerName = name.toLowerCase();
+    
+    // Liquids
+    if (lowerName.includes('coke') || lowerName.includes('juice') || lowerName.includes('milk') || 
+        lowerName.includes('water') || lowerName.includes('coffee') || lowerName.includes('tea') ||
+        lowerName.includes('soda') || lowerName.includes('drink') || lowerName.includes('beer') ||
+        lowerName.includes('wine') || lowerName.includes('smoothie') || lowerName.includes('shake')) {
+      return { type: 'liquid', unit: 'ml', defaultWeight: 250 };
+    }
+    
+    // Spices/condiments
+    if (lowerName.includes('sugar') || lowerName.includes('salt') || lowerName.includes('oil') ||
+        lowerName.includes('honey') || lowerName.includes('spice') || lowerName.includes('sauce') ||
+        lowerName.includes('ketchup') || lowerName.includes('mayo') || lowerName.includes('butter') ||
+        lowerName.includes('jam') || lowerName.includes('cream') || lowerName.includes('syrup')) {
+      return { type: 'spice', unit: 'tsp', defaultWeight: 5 };
+    }
+    
+    // Default to solid
+    return { type: 'solid', unit: 'g', defaultWeight: 100 };
+  };
+
+  const foodTypeInfo = detectFoodType(foodName);
+  const [weight, setWeight] = useState(foodTypeInfo.defaultWeight);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
   const { toast } = useToast();
@@ -52,11 +78,6 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       return enhancedResult;
     } catch (error) {
       console.error('AI nutrition fetch failed:', error);
-      toast({
-        title: "Getting Nutrition Data",
-        description: "Please wait, fetching accurate nutrition information...",
-        variant: "default",
-      });
       // Retry once more for accuracy
       try {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
@@ -68,11 +89,6 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         setAiData(enhancedResult);
         return enhancedResult;
       } catch (retryError) {
-        toast({
-          title: "Unable to get nutrition data",
-          description: "Please check your internet connection and try again",
-          variant: "destructive",
-        });
         return null;
       }
     } finally {
@@ -97,14 +113,8 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         fat: aiData.nutrition.fat,
         fiber: aiData.nutrition.fiber,
         weight,
+        unit: foodTypeInfo.unit,
         aiEnhanced: true
-      });
-    } else {
-      // Fallback if AI data is not available yet
-      toast({
-        title: "Please wait",
-        description: "AI is still calculating nutrition data...",
-        variant: "default",
       });
     }
   };
@@ -124,7 +134,9 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       <div className="space-y-2">
         <Label htmlFor="weight" className="flex items-center gap-2">
           <Scale className="h-4 w-4" />
-          Weight (grams)
+          {foodTypeInfo.type === 'liquid' ? 'Volume (milliliters)' : 
+           foodTypeInfo.type === 'spice' ? 'Amount (teaspoons)' : 
+           'Weight (grams)'}
         </Label>
         <Input
           id="weight"
@@ -132,21 +144,46 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
           value={weight}
           onChange={(e) => setWeight(Number(e.target.value))}
           min="1"
-          max="2000"
+          max={foodTypeInfo.type === 'liquid' ? 2000 : foodTypeInfo.type === 'spice' ? 50 : 2000}
           className="text-center text-lg font-semibold"
         />
-        <div className="flex gap-2 justify-center">
-          {[50, 100, 150, 200, 250].map((w) => (
-            <Button
-              key={w}
-              variant="outline"
-              size="sm"
-              onClick={() => setWeight(w)}
-              className={weight === w ? "bg-primary text-primary-foreground" : ""}
-            >
-              {w}g
-            </Button>
-          ))}
+        <div className="flex gap-2 justify-center flex-wrap">
+          {foodTypeInfo.type === 'liquid' ? 
+            [100, 200, 250, 300, 500].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w}ml
+              </Button>
+            )) :
+           foodTypeInfo.type === 'spice' ?
+            [1, 2, 5, 10, 15].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w}tsp
+              </Button>
+            )) :
+            [50, 100, 150, 200, 250].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w}g
+              </Button>
+            ))
+          }
         </div>
       </div>
 
