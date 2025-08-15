@@ -468,28 +468,6 @@ const Index = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!user && (
-              <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-accent/20">
-                <div className="flex items-center justify-center gap-2 text-primary">
-                  <LogIn className="h-5 w-5" />
-                  <span className="font-medium">Want to track your journey?</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Sign in to save your progress, track historical data, and access your nutrition goals from any device.
-                </p>
-                <Button 
-                  onClick={() => navigate('/auth')} 
-                  className="w-full"
-                  variant="default"
-                >
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign In / Sign Up
-                </Button>
-                <div className="text-xs text-muted-foreground">
-                  Or continue as guest (data won't be saved)
-                </div>
-              </div>
-            )}
             
             <div className="space-y-4">
               <div className="space-y-2">
