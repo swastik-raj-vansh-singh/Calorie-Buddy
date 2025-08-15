@@ -15,7 +15,7 @@ interface GeminiNutritionResponse {
 
 export class GeminiNutritionService {
   private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;

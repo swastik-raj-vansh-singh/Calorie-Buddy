@@ -168,7 +168,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       Return ONLY a JSON array of food names like: ["pizza", "coke", "gulab jamun"]
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
