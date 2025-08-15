@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain, Camera } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navigation } from '@/components/Navigation';
@@ -13,6 +13,8 @@ import { VisualizeSection } from '@/components/VisualizeSection';
 import { HistorySection } from '@/components/HistorySection';
 import { HelpSection } from '@/components/HelpSection';
 import { WeightCalculator } from '@/components/WeightCalculator';
+import { FoodParser } from '@/components/FoodParser';
+import { ImageFoodRecognition } from '@/components/ImageFoodRecognition';
 import { GeminiNutritionService } from '@/services/geminiService';
 
 interface Meal {
@@ -47,6 +49,8 @@ const Index = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedFoodName, setSelectedFoodName] = useState<string>('');
   const [showWeightCalculator, setShowWeightCalculator] = useState(false);
+  const [showFoodParser, setShowFoodParser] = useState(false);
+  const [showImageRecognition, setShowImageRecognition] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
@@ -140,7 +144,7 @@ const Index = () => {
     setIsAddingMeal(true);
   };
 
-  // Handle food search with AI
+  // Handle food search with AI - check if it's a complex description
   const handleFoodSearch = async () => {
     if (!searchTerm.trim()) {
       toast({
@@ -151,9 +155,22 @@ const Index = () => {
       return;
     }
 
-    setSelectedFoodName(searchTerm);
-    setShowWeightCalculator(true);
-    setIsAddingMeal(false);
+    // Check if the search term contains multiple food items or complex description
+    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
+    const isComplexDescription = complexIndicators.some(indicator => 
+      searchTerm.toLowerCase().includes(indicator)
+    ) || searchTerm.split(' ').length > 3;
+
+    if (isComplexDescription) {
+      // Use smart food parser for complex descriptions
+      setShowFoodParser(true);
+      setIsAddingMeal(false);
+    } else {
+      // Use single food calculator for simple items
+      setSelectedFoodName(searchTerm);
+      setShowWeightCalculator(true);
+      setIsAddingMeal(false);
+    }
   };
 
   // Handle Enter key in search
@@ -196,6 +213,37 @@ const Index = () => {
       title: `Meal Added! 🤖`,
       description: `${selectedFoodName} (${data.weight}g) added to ${selectedMealType} with AI nutrition data`,
     });
+  };
+
+  // Handle multiple items from food parser
+  const handleMultipleItemsCalculated = (items: any[]) => {
+    const totalCalories = items.reduce((sum, item) => sum + item.calories, 0);
+    const totalProtein = items.reduce((sum, item) => sum + item.protein, 0);
+    
+    setTodayMeals([...todayMeals, ...items]);
+    setCaloriesConsumed(caloriesConsumed + totalCalories);
+    setProteinConsumed(proteinConsumed + totalProtein);
+    setShowFoodParser(false);
+    setSearchTerm('');
+  };
+
+  // Handle image recognition result
+  const handleImageFoodDetected = (foodDescription: string) => {
+    setSearchTerm(foodDescription);
+    setShowImageRecognition(false);
+    
+    // Process the detected food description
+    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
+    const isComplexDescription = complexIndicators.some(indicator => 
+      foodDescription.toLowerCase().includes(indicator)
+    ) || foodDescription.split(' ').length > 3;
+
+    if (isComplexDescription) {
+      setShowFoodParser(true);
+    } else {
+      setSelectedFoodName(foodDescription);
+      setShowWeightCalculator(true);
+    }
   };
 
   // Quick food suggestions for common items
@@ -621,17 +669,31 @@ const Index = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={handleSearchKeyPress}
-                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground pr-20"
+                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground pr-32"
                 />
-                <Button 
-                  onClick={handleFoodSearch}
-                  size="sm"
-                  className="absolute right-1 top-1 h-8"
-                  disabled={!searchTerm.trim()}
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  Search
-                </Button>
+                <div className="absolute right-1 top-1 flex gap-1">
+                  <Button 
+                    onClick={() => {
+                      setShowImageRecognition(true);
+                      setIsAddingMeal(false);
+                    }}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 border-primary/20 hover:bg-primary/10"
+                    title="Take a photo to detect food"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    onClick={handleFoodSearch}
+                    size="sm"
+                    className="h-8"
+                    disabled={!searchTerm.trim()}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    Search
+                  </Button>
+                </div>
               </div>
               
               {/* Quick Suggestions */}
@@ -686,6 +748,35 @@ const Index = () => {
                 }}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Food Parser Modal */}
+        <Dialog open={showFoodParser} onOpenChange={setShowFoodParser}>
+          <DialogContent className="max-w-4xl bg-card border-border">
+            <FoodParser
+              foodDescription={searchTerm}
+              onItemsCalculated={handleMultipleItemsCalculated}
+              onCancel={() => {
+                setShowFoodParser(false);
+                setSearchTerm('');
+                setIsAddingMeal(true);
+              }}
+              selectedMealType={selectedMealType}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Image Recognition Modal */}
+        <Dialog open={showImageRecognition} onOpenChange={setShowImageRecognition}>
+          <DialogContent className="max-w-4xl bg-card border-border">
+            <ImageFoodRecognition
+              onFoodDetected={handleImageFoodDetected}
+              onCancel={() => {
+                setShowImageRecognition(false);
+                setIsAddingMeal(true);
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
