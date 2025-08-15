@@ -832,6 +832,11 @@ const Index = () => {
         {/* Food Parser Modal */}
         <Dialog open={showFoodParser} onOpenChange={setShowFoodParser}>
           <DialogContent className="max-w-4xl bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                🧠 Smart Food Parser
+              </DialogTitle>
+            </DialogHeader>
             <FoodParser
               foodDescription={searchTerm}
               onItemsCalculated={handleMultipleItemsCalculated}
@@ -848,6 +853,11 @@ const Index = () => {
         {/* Image Recognition Modal */}
         <Dialog open={showImageRecognition} onOpenChange={setShowImageRecognition}>
           <DialogContent className="max-w-4xl bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                📷 Image Food Recognition
+              </DialogTitle>
+            </DialogHeader>
             <ImageFoodRecognition
               onFoodDetected={handleImageFoodDetected}
               onCancel={() => {
