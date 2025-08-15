@@ -32,7 +32,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   onCalculated,
   onCancel
 }) => {
-  // Detect food type and set appropriate unit and default weight
+  // Detect food type and set appropriate unit and default weight with intelligent context
   const detectFoodType = (name: string) => {
     const lowerName = name.toLowerCase();
     
@@ -42,6 +42,38 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         lowerName.includes('soda') || lowerName.includes('drink') || lowerName.includes('beer') ||
         lowerName.includes('wine') || lowerName.includes('smoothie') || lowerName.includes('shake')) {
       return { type: 'liquid', unit: 'ml', defaultWeight: 250 };
+    }
+    
+    // Pizza - size based
+    if (lowerName.includes('pizza')) {
+      return { type: 'sized', unit: 'size', defaultWeight: 1 }; // 1 = medium size
+    }
+    
+    // Cheese - slices
+    if (lowerName.includes('cheese') && !lowerName.includes('cottage') && !lowerName.includes('paneer')) {
+      return { type: 'counted', unit: 'slices', defaultWeight: 2 };
+    }
+    
+    // Ice cream - contextual
+    if (lowerName.includes('ice cream') || lowerName.includes('icecream')) {
+      if (lowerName.includes('tub') || lowerName.includes('container')) {
+        return { type: 'counted', unit: 'tub', defaultWeight: 1 };
+      } else if (lowerName.includes('cone')) {
+        return { type: 'counted', unit: 'cone', defaultWeight: 1 };
+      } else if (lowerName.includes('candy') || lowerName.includes('bar')) {
+        return { type: 'counted', unit: 'candy', defaultWeight: 1 };
+      }
+      return { type: 'counted', unit: 'scoops', defaultWeight: 2 };
+    }
+    
+    // Indian/Cultural dishes - quantity based
+    if (lowerName.includes('gulab jamun') || lowerName.includes('samosa') || lowerName.includes('dosa') ||
+        lowerName.includes('idli') || lowerName.includes('uttapam') || lowerName.includes('vada') ||
+        lowerName.includes('pakora') || lowerName.includes('kachori') || lowerName.includes('dhokla') ||
+        lowerName.includes('roti') || lowerName.includes('naan') || lowerName.includes('chapati') ||
+        lowerName.includes('paratha') || lowerName.includes('banana') || lowerName.includes('apple') ||
+        lowerName.includes('orange') || lowerName.includes('egg') || lowerName.includes('biscuit')) {
+      return { type: 'counted', unit: 'pieces', defaultWeight: 1 };
     }
     
     // Spices/condiments
@@ -134,8 +166,15 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       <div className="space-y-2">
         <Label htmlFor="weight" className="flex items-center gap-2">
           <Scale className="h-4 w-4" />
-          {foodTypeInfo.type === 'liquid' ? 'Volume (milliliters)' : 
-           foodTypeInfo.type === 'spice' ? 'Amount (teaspoons)' : 
+          {foodTypeInfo.unit === 'ml' ? 'Volume (milliliters)' : 
+           foodTypeInfo.unit === 'tsp' ? 'Amount (teaspoons)' : 
+           foodTypeInfo.unit === 'pieces' ? 'Quantity (pieces)' :
+           foodTypeInfo.unit === 'slices' ? 'Quantity (slices)' :
+           foodTypeInfo.unit === 'size' ? 'Pizza Size' :
+           foodTypeInfo.unit === 'scoops' ? 'Quantity (scoops)' :
+           foodTypeInfo.unit === 'tub' ? 'Quantity (tubs)' :
+           foodTypeInfo.unit === 'cone' ? 'Quantity (cones)' :
+           foodTypeInfo.unit === 'candy' ? 'Quantity (candies)' :
            'Weight (grams)'}
         </Label>
         <Input
@@ -144,11 +183,16 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
           value={weight}
           onChange={(e) => setWeight(Number(e.target.value))}
           min="1"
-          max={foodTypeInfo.type === 'liquid' ? 2000 : foodTypeInfo.type === 'spice' ? 50 : 2000}
+          max={foodTypeInfo.unit === 'ml' ? 2000 : 
+               foodTypeInfo.unit === 'tsp' ? 50 : 
+               foodTypeInfo.unit === 'pieces' || foodTypeInfo.unit === 'slices' || 
+               foodTypeInfo.unit === 'scoops' || foodTypeInfo.unit === 'tub' || 
+               foodTypeInfo.unit === 'cone' || foodTypeInfo.unit === 'candy' ? 20 :
+               foodTypeInfo.unit === 'size' ? 3 : 2000}
           className="text-center text-lg font-semibold"
         />
         <div className="flex gap-2 justify-center flex-wrap">
-          {foodTypeInfo.type === 'liquid' ? 
+          {foodTypeInfo.unit === 'ml' ? 
             [100, 200, 250, 300, 500].map((w) => (
               <Button
                 key={w}
@@ -160,7 +204,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
                 {w}ml
               </Button>
             )) :
-           foodTypeInfo.type === 'spice' ?
+           foodTypeInfo.unit === 'tsp' ?
             [1, 2, 5, 10, 15].map((w) => (
               <Button
                 key={w}
@@ -170,6 +214,36 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
                 className={weight === w ? "bg-primary text-primary-foreground" : ""}
               >
                 {w}tsp
+              </Button>
+            )) :
+           foodTypeInfo.unit === 'size' ?
+            [
+              { label: 'Small', value: 0.7 },
+              { label: 'Medium', value: 1 },
+              { label: 'Large', value: 1.5 }
+            ].map((size) => (
+              <Button
+                key={size.label}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(size.value)}
+                className={weight === size.value ? "bg-primary text-primary-foreground" : ""}
+              >
+                {size.label}
+              </Button>
+            )) :
+           (foodTypeInfo.unit === 'pieces' || foodTypeInfo.unit === 'slices' || 
+            foodTypeInfo.unit === 'scoops' || foodTypeInfo.unit === 'tub' || 
+            foodTypeInfo.unit === 'cone' || foodTypeInfo.unit === 'candy') ?
+            [1, 2, 3, 4, 5].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w}
               </Button>
             )) :
             [50, 100, 150, 200, 250].map((w) => (
