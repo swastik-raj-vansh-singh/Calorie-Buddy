@@ -13,7 +13,7 @@ import { VisualizeSection } from '@/components/VisualizeSection';
 import { HistorySection } from '@/components/HistorySection';
 import { HelpSection } from '@/components/HelpSection';
 import { WeightCalculator } from '@/components/WeightCalculator';
-import { EXPANDED_FOOD_DATABASE, FoodItem } from '@/data/foodDatabase';
+import { GeminiNutritionService } from '@/services/geminiService';
 
 interface Meal {
   id: number;
@@ -45,12 +45,13 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
-  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [selectedFoodName, setSelectedFoodName] = useState<string>('');
   const [showWeightCalculator, setShowWeightCalculator] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
-  // Use the expanded food database
-  const FOOD_DATABASE = EXPANDED_FOOD_DATABASE;
+  // Initialize Gemini service
+  const geminiService = new GeminiNutritionService('AIzaSyCUtMTwF_zESPQltG94mT6TAixcf42-lUQ');
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -139,11 +140,27 @@ const Index = () => {
     setIsAddingMeal(true);
   };
 
-  // Updated addFood function to handle weight calculator
-  const handleFoodSelect = (food: FoodItem) => {
-    setSelectedFood(food);
+  // Handle food search with AI
+  const handleFoodSearch = async () => {
+    if (!searchTerm.trim()) {
+      toast({
+        title: "Please enter a food item",
+        description: "Type the name of the food you want to add",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFoodName(searchTerm);
     setShowWeightCalculator(true);
     setIsAddingMeal(false);
+  };
+
+  // Handle Enter key in search
+  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleFoodSearch();
+    }
   };
 
   const handleWeightCalculated = (data: {
@@ -157,7 +174,7 @@ const Index = () => {
   }) => {
     const newMeal: Meal = {
       id: Date.now(),
-      name: `${selectedFood?.name} (${data.weight}g)`,
+      name: `${selectedFoodName} (${data.weight}g)`,
       calories: data.calories,
       protein: data.protein,
       type: selectedMealType,
@@ -172,22 +189,21 @@ const Index = () => {
     setCaloriesConsumed(caloriesConsumed + data.calories);
     setProteinConsumed(proteinConsumed + data.protein);
     setShowWeightCalculator(false);
-    setSelectedFood(null);
+    setSelectedFoodName('');
     setSearchTerm('');
 
     toast({
-      title: `Meal Added! ${data.aiEnhanced ? '🤖' : '🍽️'}`,
-      description: `${selectedFood?.name} (${data.weight}g) added to ${selectedMealType}${data.aiEnhanced ? ' with AI nutrition data' : ''}`,
+      title: `Meal Added! 🤖`,
+      description: `${selectedFoodName} (${data.weight}g) added to ${selectedMealType} with AI nutrition data`,
     });
   };
 
-  const filteredFoods = searchTerm 
-    ? FOOD_DATABASE.filter(food => 
-        food.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        food.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (food.origin && food.origin.toLowerCase().includes(searchTerm.toLowerCase()))
-      ).slice(0, 20)
-    : FOOD_DATABASE.slice(0, 30);
+  // Quick food suggestions for common items
+  const quickSuggestions = [
+    'Rice and Dal', 'Roti with Sabzi', 'Chicken Curry', 'Paneer Tikka', 'Biryani',
+    'Naan', 'Samosa', 'Kachori', 'Chole Bhature', 'Dosa', 'Idli', 'Uttapam',
+    'Burger', 'Pizza', 'Pasta', 'Sandwich', 'Salad', 'Fruits', 'Nuts', 'Yogurt'
+  ];
 
   const resetData = () => {
     localStorage.removeItem('calorieBuddyData');
@@ -583,54 +599,66 @@ const Index = () => {
           <HelpSection />
         )}
 
-        {/* Enhanced Food Search Modal */}
+        {/* AI-Powered Food Search Modal */}
         <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
-                <Search className="h-5 w-5" />
+                <Brain className="h-5 w-5 text-primary" />
                 Add Food to {selectedMealType}
-                <Badge variant="outline" className="ml-2">{FOOD_DATABASE.length}+ foods</Badge>
+                <Badge variant="default" className="ml-2 bg-primary text-primary-foreground">
+                  AI-Powered
+                </Badge>
               </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Type any food item and our AI will calculate accurate nutrition data
+              </p>
             </DialogHeader>
             <div className="space-y-4">
-              <Input
-                placeholder="Search for food items, categories, or origins..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground"
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Type any food item (e.g., cheese burger with extra cheese and 100ml coke)"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground pr-20"
+                />
+                <Button 
+                  onClick={handleFoodSearch}
+                  size="sm"
+                  className="absolute right-1 top-1 h-8"
+                  disabled={!searchTerm.trim()}
+                >
+                  <Search className="h-4 w-4 mr-1" />
+                  Search
+                </Button>
+              </div>
               
-              <div className="grid gap-2 max-h-96 overflow-y-auto">
-                {filteredFoods.map((food, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    onClick={() => handleFoodSelect(food)}
-                    className="justify-between h-auto p-4 text-left hover:bg-primary/5 border-border/50 text-foreground"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="font-medium text-foreground">{food.name}</div>
-                        <Badge variant="secondary" className="text-xs">
-                          {food.category}
-                        </Badge>
-                        {food.origin && (
-                          <Badge variant="outline" className="text-xs">
-                            {food.origin}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-foreground/60">
-                        {food.calories} cal • {food.protein}g protein per 100g
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Scale className="h-4 w-4 text-muted-foreground" />
-                      <Plus className="h-4 w-4" />
-                    </div>
-                  </Button>
-                ))}
+              {/* Quick Suggestions */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-foreground">Quick Suggestions:</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {quickSuggestions.map((suggestion, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm(suggestion);
+                        handleFoodSearch();
+                      }}
+                      className="justify-start text-left hover:bg-primary/5 border-border/50 text-foreground text-xs"
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="text-center text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                <Brain className="h-5 w-5 mx-auto mb-2 text-primary" />
+                Our AI can analyze any food combination and provide accurate nutrition data.
+                Just type what you're eating and press Enter or click Search!
               </div>
             </div>
           </DialogContent>
@@ -645,15 +673,15 @@ const Index = () => {
                 Calculate Nutrition
               </DialogTitle>
             </DialogHeader>
-            {selectedFood && (
+            {selectedFoodName && (
               <WeightCalculator
-                foodName={selectedFood.name}
-                baseCalories={selectedFood.calories}
-                baseProtein={selectedFood.protein}
+                foodName={selectedFoodName}
+                baseCalories={0}
+                baseProtein={0}
                 onCalculated={handleWeightCalculated}
                 onCancel={() => {
                   setShowWeightCalculator(false);
-                  setSelectedFood(null);
+                  setSelectedFoodName('');
                   setIsAddingMeal(true);
                 }}
               />
