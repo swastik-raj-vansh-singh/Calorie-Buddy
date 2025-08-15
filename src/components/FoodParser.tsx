@@ -168,7 +168,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       Return ONLY a JSON array of food names like: ["pizza", "coke", "gulab jamun"]
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyCcCxLW9JftAKDSoWfV8USlF-B8sunO6wE`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,17 +182,15 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         })
       });
 
-      // Handle API errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
-      }
-      
       const data = await response.json();
+      
+      // Handle API errors
+      if (data.error) {
+        throw new Error(`Gemini API error: ${data.error.message}`);
+      }
       
       // Check if the response has the expected structure
       if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
-        console.error('Invalid Gemini API response:', data);
         throw new Error('Invalid response structure from Gemini API');
       }
       
