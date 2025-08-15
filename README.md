@@ -1,73 +1,113 @@
-# Welcome to your Lovable project
+# NutriVision - Smart Food Recognition & Nutrition Tracker
 
-## Project info
+A modern web application that combines computer vision and nutrition science to help users track their dietary intake through intelligent food recognition and comprehensive nutritional analysis.
 
-**URL**: https://lovable.dev/projects/db9d0f9b-8172-41bf-b62f-f307cfeaed75
+## 🚀 Features
 
-## How can I edit this code?
+- **Smart Food Recognition**: Upload food images for automatic identification and nutritional analysis
+- **Manual Food Entry**: Search and add foods from an extensive nutritional database
+- **Weight Calculator**: Calculate nutritional values based on actual food weights
+- **Progress Visualization**: Interactive charts showing nutritional trends and goal tracking
+- **History Tracking**: Complete meal history with detailed nutritional breakdowns
+- **User Authentication**: Secure account management with data persistence
+- **Responsive Design**: Optimized for desktop and mobile devices
 
-There are several ways of editing your application.
+## 🛠️ Technology Stack
 
-**Use Lovable**
+- **Frontend Framework**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and optimized builds
+- **Styling**: Tailwind CSS with custom design system
+- **UI Components**: shadcn/ui component library
+- **State Management**: TanStack Query for server state management
+- **Routing**: React Router v6
+- **Authentication**: Supabase Auth
+- **Database**: Supabase PostgreSQL
+- **Deployment**: Modern web hosting with CDN
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/db9d0f9b-8172-41bf-b62f-f307cfeaed75) and start prompting.
+## 📋 Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js (v18 or higher)
+- npm or yarn package manager
+- Modern web browser
 
-**Use your preferred IDE**
+## 🔧 Installation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd nutriVision
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Follow these steps:
+3. **Environment Setup**
+   - Ensure Supabase configuration is properly set up
+   - Verify API endpoints are accessible
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+4. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+5. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 📁 Project Structure
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Base UI components (shadcn/ui)
+│   ├── FoodParser.tsx  # Food recognition component
+│   ├── WeightCalculator.tsx
+│   └── ...
+├── pages/              # Application pages
+├── services/           # API and external service integrations
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions
+└── data/               # Static data and configurations
 ```
 
-**Edit a file directly in GitHub**
+## 🎯 Core Components
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Food Recognition Engine**: Processes food images and identifies nutritional content
+- **Nutritional Database**: Comprehensive food database with accurate nutritional information
+- **Progress Analytics**: Advanced charting and trend analysis
+- **User Management**: Secure authentication and profile management
 
-**Use GitHub Codespaces**
+## 🔒 Security Features
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Secure user authentication
+- Data encryption in transit and at rest
+- Privacy-focused design with user data protection
+- Regular security updates and monitoring
 
-## What technologies are used for this project?
+## 🚀 Deployment
 
-This project is built with:
+The application is optimized for modern web hosting platforms:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Build the project: `npm run build`
+2. Deploy the `dist` folder to your hosting provider
+3. Configure environment variables as needed
+4. Set up proper domain and SSL certificates
 
-## How can I deploy this project?
+## 🤝 Contributing
 
-Simply open [Lovable](https://lovable.dev/projects/db9d0f9b-8172-41bf-b62f-f307cfeaed75) and click on Share -> Publish.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Can I connect a custom domain to my Lovable project?
+## 📝 License
 
-Yes, you can!
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📞 Support
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For support, questions, or feature requests, please open an issue in the GitHub repository.
