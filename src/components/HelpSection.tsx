@@ -6,42 +6,39 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { HelpCircle, Send, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
-
 export const HelpSection: React.FC = () => {
   const [foodName, setFoodName] = useState('');
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSubmitFood = async () => {
     if (!foodName.trim()) {
       toast({
         title: "Please enter a food name",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsSubmitting(true);
-
     try {
-      const { data, error } = await supabase.functions.invoke('send-suggestion-email', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('send-suggestion-email', {
         body: {
           foodName: foodName.trim(),
-          comment: comment.trim() || undefined,
+          comment: comment.trim() || undefined
         }
       });
-
       if (error) {
         throw error;
       }
-
       toast({
         title: "✅ Suggestion sent successfully!",
-        description: "Thank you! Your food suggestion has been emailed to swastikrajvanshsingh0@gmail.com",
+        description: "Thank you! Your food suggestion has been emailed to swastikrajvanshsingh0@gmail.com"
       });
-
       setFoodName('');
       setComment('');
     } catch (error: any) {
@@ -49,15 +46,13 @@ export const HelpSection: React.FC = () => {
       toast({
         title: "Failed to send suggestion",
         description: "Please try again or contact support if the issue persists.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  return (
-    <div className="space-y-6 pb-20 md:pb-6">
+  return <div className="space-y-6 pb-20 md:pb-6">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2">🤝 Help & Suggestions</h2>
         <p className="text-muted-foreground">Help us improve by suggesting missing foods or sharing feedback</p>
@@ -77,34 +72,21 @@ export const HelpSection: React.FC = () => {
               <label className="text-sm font-medium text-foreground mb-2 block">
                 Food Name *
               </label>
-              <Input
-                placeholder="e.g., Quinoa Salad, Masala Dosa, etc."
-                value={foodName}
-                onChange={(e) => setFoodName(e.target.value)}
-                className="bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground"
-              />
+              <Input placeholder="e.g., Quinoa Salad, Masala Dosa, etc." value={foodName} onChange={e => setFoodName(e.target.value)} className="bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground" />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">
                 Additional Details (Optional)
               </label>
-              <Textarea
-                placeholder="Any specific details about calories, protein, or preparation..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                className="bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground min-h-[100px]"
-              />
+              <Textarea placeholder="Any specific details about calories, protein, or preparation..." value={comment} onChange={e => setComment(e.target.value)} className="bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground min-h-[100px]" />
             </div>
-            <Button 
-              onClick={handleSubmitFood} 
-              className="w-full"
-              disabled={!foodName.trim() || isSubmitting}
-            >
+            <Button onClick={handleSubmitFood} className="w-full" disabled={!foodName.trim() || isSubmitting}>
               <Send className="h-4 w-4 mr-2" />
               {isSubmitting ? "Sending..." : "Send Suggestion"}
             </Button>
             <div className="text-xs text-muted-foreground text-center space-y-1">
-              <p>Email is sent to Swastik Rajwant Singh, 0@gmail.com</p>
+              <p>Email is sent to swastikrajvanshsingh
+0@gmail.com</p>
             </div>
           </CardContent>
         </Card>
@@ -155,6 +137,5 @@ export const HelpSection: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
