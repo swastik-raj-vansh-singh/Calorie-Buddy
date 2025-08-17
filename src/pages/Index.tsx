@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain, Camera, LogOut, LogIn } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, Clock, Search, Plus, RotateCcw, Utensils, User, BarChart3, Calendar, HelpCircle, Home, Scale, Brain, Camera, LogOut, LogIn, Edit } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navigation } from '@/components/Navigation';
@@ -71,6 +71,12 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [showMealEditor, setShowMealEditor] = useState(false);
+  const [editingSearchItem, setEditingSearchItem] = useState<any>(null);
+  const [editingSearchItemIndex, setEditingSearchItemIndex] = useState<number | null>(null);
+  const [showItemEditor, setShowItemEditor] = useState(false);
+  const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [editUnit, setEditUnit] = useState<string>('');
+  const [editSize, setEditSize] = useState<string>('');
   
   // Services
   const dataService = new SupabaseDataService();
@@ -1093,23 +1099,41 @@ const Index = () => {
                   
                   <div className="space-y-3">
                     {searchResults.items.map((item: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-background/50 rounded-lg border border-border/30">
                         <div className="flex-1">
                           <div className="font-medium text-foreground capitalize">
-                            {item.name} ({item.quantity} {item.unit})
+                            {item.name} ({item.quantity} {item.unit}{item.size ? `, ${item.size}` : ''})
                           </div>
                           <div className="text-sm text-muted-foreground mt-1">
                             {item.estimated_calories} cal • {item.protein || 0}g protein • {item.carbs || 0}g carbs • {item.fat || 0}g fat
                           </div>
                         </div>
-                        <Button
-                          onClick={() => handleAddSearchItem(item)}
-                          size="sm"
-                          className="ml-3"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
+                        <div className="flex items-center gap-2 sm:ml-3 w-full sm:w-auto justify-end sm:justify-start">
+                          <Button
+                            onClick={() => {
+                              setEditingSearchItem({ ...item, __originalQuantity: item.quantity || 1 });
+                              setEditingSearchItemIndex(index);
+                              setEditQuantity(item.quantity || 1);
+                              setEditUnit(item.unit || 'quantity');
+                              setEditSize(item.size || '');
+                              setShowItemEditor(true);
+                            }}
+                            size="sm"
+                            variant="secondary"
+                            className="min-w-[84px]"
+                            title="Edit quantity/size"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            onClick={() => handleAddSearchItem(item)}
+                            size="sm"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
                       </div>
                     ))}
                     
@@ -1214,6 +1238,223 @@ const Index = () => {
               }}
               selectedMealType={selectedMealType}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Item Editor Modal (for search result items) */}
+        <Dialog open={showItemEditor} onOpenChange={setShowItemEditor}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Edit className="h-5 w-5" />
+                Edit Item
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Adjust quantity, unit, or size. Nutrition scales automatically.
+              </p>
+            </DialogHeader>
+            {editingSearchItem && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Food Item</label>
+                  <Input value={editingSearchItem.name} disabled className="bg-muted/50" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => setEditQuantity((q) => Math.max(0.1, parseFloat((q - 0.1).toFixed(1))))}
+                        size="sm"
+                        variant="outline"
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={editQuantity}
+                        onChange={(e) => setEditQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))}
+                        className="text-center"
+                      />
+                      <Button
+                        onClick={() => setEditQuantity((q) => parseFloat((q + 0.1).toFixed(1)))}
+                        size="sm"
+                        variant="outline"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Unit</label>
+                    <Select value={editUnit} onValueChange={setEditUnit}>
+                      <SelectTrigger className="bg-background/50 border-border/50">
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {(() => {
+                          const baseUnit = editingSearchItem.unit || 'quantity';
+                          const allUnits = Array.from(new Set([
+                            baseUnit,
+                            'quantity',
+                            'grams',
+                            'ml',
+                            'cup',
+                            'teaspoon',
+                            'tablespoon',
+                            'slice',
+                            'can',
+                            'bottle',
+                            'piece',
+                            'size',
+                          ].filter(Boolean)));
+                          return allUnits.map((u) => (
+                            <SelectItem key={u} value={u}>{u}</SelectItem>
+                          ));
+                        })()}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Optional Size Selector for items like pizza, burger, etc. */}
+                {(/pizza|burger|sandwich/i.test(editingSearchItem.name) || editUnit === 'size') && (
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Size</label>
+                    <Select value={editSize || 'medium'} onValueChange={setEditSize}>
+                      <SelectTrigger className="bg-background/50 border-border/50">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {['small', 'medium', 'large'].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Intelligent Suggestions */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Quick Suggestions</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const suggestions: Array<{ label: string; qty: number; unit?: string; size?: string }> = [];
+                      const unit = (editingSearchItem.unit || '').toLowerCase();
+                      const name = (editingSearchItem.name || '').toLowerCase();
+                      // Can/bottle drinks
+                      if (unit === 'can' || /coke|pepsi|sprite|soda|cola/.test(name)) {
+                        [2,3,4].forEach((n) => suggestions.push({ label: `${n} can`, qty: n, unit: 'can' }));
+                      }
+                      // Pizza sizes
+                      if (/pizza/.test(name)) {
+                        ['small','medium','large'].forEach((s) => suggestions.push({ label: `1 ${s} pizza`, qty: 1, unit: 'size', size: s }));
+                        ['small','medium','large'].forEach((s) => suggestions.push({ label: `2 ${s} pizza`, qty: 2, unit: 'size', size: s }));
+                      }
+                      // Default multiples
+                      if (suggestions.length === 0) {
+                        [1,2,3].forEach((n) => suggestions.push({ label: `${n} ${unit || 'qty'}`, qty: n, unit: unit || 'quantity' }));
+                      }
+                      return suggestions.map((s, idx) => (
+                        <Button
+                          key={idx}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() => {
+                            setEditQuantity(s.qty);
+                            if (s.unit) setEditUnit(s.unit);
+                            if (s.size) setEditSize(s.size);
+                          }}
+                        >
+                          {s.label}
+                        </Button>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* Preview of recalculated nutrition */}
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <h4 className="font-medium text-foreground mb-2">Updated Nutrition (preview)</h4>
+                  {(() => {
+                    const originalQty = (editingSearchItem as any).__originalQuantity || editingSearchItem.quantity || 1;
+                    // Apply simple size multipliers for pizza-like items
+                    const sizeMultiplierMap: Record<string, number> = { small: 1, medium: 1.5, large: 2 };
+                    const originalSize = (editingSearchItem.size || 'medium').toLowerCase();
+                    const newSize = (editSize || originalSize).toLowerCase();
+                    const sizeMultiplier = /pizza|burger|sandwich/i.test(editingSearchItem.name) || editUnit === 'size'
+                      ? (sizeMultiplierMap[newSize] || 1) / (sizeMultiplierMap[originalSize] || 1)
+                      : 1;
+
+                    const ratio = (editQuantity / originalQty) * sizeMultiplier;
+                    const cal = Math.max(1, Math.round((editingSearchItem.estimated_calories || 0) * ratio));
+                    const protein = Math.max(0, Math.round((editingSearchItem.protein || 0) * ratio));
+                    const carbs = Math.max(0, Math.round((editingSearchItem.carbs || 0) * ratio));
+                    const fat = Math.max(0, Math.round((editingSearchItem.fat || 0) * ratio));
+                    return (
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>Calories: <span className="font-medium">{cal}</span></div>
+                        <div>Protein: <span className="font-medium">{protein}g</span></div>
+                        <div>Carbs: <span className="font-medium">{carbs}g</span></div>
+                        <div>Fat: <span className="font-medium">{fat}g</span></div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => {
+                      if (editingSearchItemIndex == null || !searchResults) return;
+                      const idx = editingSearchItemIndex as number;
+                      const originalQty = (editingSearchItem as any).__originalQuantity || editingSearchItem.quantity || 1;
+                      const sizeMultiplierMap: Record<string, number> = { small: 1, medium: 1.5, large: 2 };
+                      const originalSize = (editingSearchItem.size || 'medium').toLowerCase();
+                      const newSize = (editSize || originalSize).toLowerCase();
+                      const sizeMultiplier = /pizza|burger|sandwich/i.test(editingSearchItem.name) || editUnit === 'size'
+                        ? (sizeMultiplierMap[newSize] || 1) / (sizeMultiplierMap[originalSize] || 1)
+                        : 1;
+                      const ratio = (editQuantity / originalQty) * sizeMultiplier;
+                      const updatedItem = {
+                        ...editingSearchItem,
+                        quantity: editQuantity,
+                        unit: editUnit,
+                        size: editSize || editingSearchItem.size,
+                        estimated_calories: Math.max(1, Math.round((editingSearchItem.estimated_calories || 0) * ratio)),
+                        protein: Math.max(0, Math.round((editingSearchItem.protein || 0) * ratio)),
+                        carbs: Math.max(0, Math.round((editingSearchItem.carbs || 0) * ratio)),
+                        fat: Math.max(0, Math.round((editingSearchItem.fat || 0) * ratio)),
+                      } as any;
+                      const newItems = [...searchResults.items];
+                      newItems[idx] = updatedItem;
+                      const newTotal = newItems.reduce((sum: number, it: any) => sum + (it.estimated_calories || 0), 0);
+                      setSearchResults({ ...searchResults, items: newItems, total_calories: Math.round(newTotal) });
+                      setShowItemEditor(false);
+                      setEditingSearchItem(null);
+                      setEditingSearchItemIndex(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Save Changes
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowItemEditor(false);
+                      setEditingSearchItem(null);
+                      setEditingSearchItemIndex(null);
+                    }}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 
