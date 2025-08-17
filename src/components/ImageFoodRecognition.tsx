@@ -26,9 +26,9 @@ export const ImageFoodRecognition: React.FC<ImageFoodRecognitionProps> = ({
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'environment', // Use back camera
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: { exact: 'environment' }, // Force rear camera
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 }
         }
       });
       
