@@ -235,20 +235,29 @@ const Index = () => {
     });
   };
 
-  const handleQuickSuggestionClick = (suggestion: string) => {
-    setSearchTerm(suggestion);
-    setIsAddingMeal(false);
-    
-    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
-    const isComplexDescription = complexIndicators.some(indicator => 
-      suggestion.toLowerCase().includes(indicator)
-    ) || suggestion.split(' ').length > 3;
+  const handleQuickSuggestionClick = async (suggestion: string) => {
+    const term = suggestion.trim();
+    if (!term) return;
 
-    if (isComplexDescription) {
-      setShowFoodParser(true);
-    } else {
-      setSelectedFoodName(suggestion);
-      setShowWeightCalculator(true);
+    setSearchTerm(term);
+    setIsAddingMeal(true);
+    setIsSearching(true);
+    try {
+      const result = await enhancedOpenaiService.parseAndEstimateNutrition(term);
+      setSearchResults(result);
+      toast({
+        title: "Food analyzed successfully!",
+        description: `Found ${result.items.length} item(s) with ${result.total_calories} total calories`,
+      });
+    } catch (error) {
+      console.error('Error analyzing quick suggestion:', error);
+      toast({
+        title: "Analysis failed",
+        description: "Please try again or use manual entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -323,17 +332,14 @@ const Index = () => {
       }
     }
 
-    const newCaloriesConsumed = caloriesConsumed + data.calories;
-    const newProteinConsumed = proteinConsumed + data.protein;
-    
-    setTodayMeals([...todayMeals, newMeal]);
-    setCaloriesConsumed(newCaloriesConsumed);
-    setProteinConsumed(newProteinConsumed);
+    setTodayMeals(prev => [...prev, newMeal]);
+    setCaloriesConsumed(prev => prev + data.calories);
+    setProteinConsumed(prev => prev + data.protein);
     setShowWeightCalculator(false);
     setSelectedFoodName('');
     setSearchTerm('');
 
-    showCalorieConsumptionAlert(data.calories, data.protein, newCaloriesConsumed);
+    showCalorieConsumptionAlert(data.calories, data.protein, caloriesConsumed + data.calories);
   };
 
   const handleMultipleItemsCalculated = async (items: any[]) => {
@@ -365,21 +371,18 @@ const Index = () => {
       }
     }
     
-    const newCaloriesConsumed = caloriesConsumed + totalCalories;
-    const newProteinConsumed = proteinConsumed + totalProtein;
-    
-    setTodayMeals([...todayMeals, ...items]);
-    setCaloriesConsumed(newCaloriesConsumed);
-    setProteinConsumed(newProteinConsumed);
+    setTodayMeals(prev => [...prev, ...items]);
+    setCaloriesConsumed(prev => prev + totalCalories);
+    setProteinConsumed(prev => prev + totalProtein);
     setShowFoodParser(false);
     setSearchTerm('');
 
-    showCalorieConsumptionAlert(totalCalories, totalProtein, newCaloriesConsumed);
+    showCalorieConsumptionAlert(totalCalories, totalProtein, caloriesConsumed + totalCalories);
   };
 
-  const handleAddSearchItem = async (item: any) => {
+  const handleAddSearchItem = async (item: any, index: number = 0) => {
     const newMeal: Meal = {
-      id: Date.now(),
+      id: Date.now() + index, // Add index to prevent duplicate IDs
       name: `${item.name} (${item.quantity} ${item.unit})`,
       calories: item.estimated_calories,
       protein: item.protein || 0,
@@ -415,12 +418,9 @@ const Index = () => {
       }
     }
 
-    const newCaloriesConsumed = caloriesConsumed + item.estimated_calories;
-    const newProteinConsumed = proteinConsumed + (item.protein || 0);
-    
-    setTodayMeals([...todayMeals, newMeal]);
-    setCaloriesConsumed(newCaloriesConsumed);
-    setProteinConsumed(newProteinConsumed);
+    setTodayMeals(prev => [...prev, newMeal]);
+    setCaloriesConsumed(prev => prev + item.estimated_calories);
+    setProteinConsumed(prev => prev + (item.protein || 0));
 
     toast({
       title: "Meal added successfully!",
@@ -1147,7 +1147,7 @@ const Index = () => {
                     <div className="flex gap-2 pt-2">
                       <Button
                         onClick={() => {
-                          searchResults.items.forEach((item: any) => handleAddSearchItem(item));
+                          searchResults.items.forEach((item: any, idx: number) => handleAddSearchItem(item, idx));
                           setSearchResults(null);
                           setSearchTerm('');
                           setIsAddingMeal(false);
