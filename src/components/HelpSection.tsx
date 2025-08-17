@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
-import { HelpCircle, Send, Plus } from 'lucide-react';
+import { HelpCircle, Send, Plus, Utensils, Target, Camera, Scale, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 export const HelpSection: React.FC = () => {
   const [foodName, setFoodName] = useState('');
@@ -98,41 +99,68 @@ export const HelpSection: React.FC = () => {
               Frequently Asked Questions
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-semibold text-foreground text-sm mb-1">
-                  How accurate are the calorie counts?
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  Our database uses standard nutritional values. Actual values may vary based on preparation and portion sizes.
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground text-sm mb-1">
-                  Can I edit my daily goals?
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  Yes! Use the reset button in the dashboard to set new calorie and protein goals.
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground text-sm mb-1">
-                  What if I can't find a food item?
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  Use the suggestion form to let us know what's missing. We regularly update our database.
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground text-sm mb-1">
-                  How do I track multiple servings?
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  Simply add the same food item multiple times, or estimate the total calories for your portion.
-                </p>
-              </div>
-            </div>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full space-y-2">
+              <AccordionItem value="accuracy" className="border border-border/30 rounded-lg px-4 bg-gradient-to-r from-primary/5 to-secondary/5">
+                <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    How accurate are the calorie counts? 🎯
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground pb-3">
+                  Our AI-powered system uses comprehensive nutritional databases and smart portion estimation. While very accurate, actual values may vary based on cooking methods and specific brands. We're constantly improving accuracy with your feedback!
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="goals" className="border border-border/30 rounded-lg px-4 bg-gradient-to-r from-secondary/5 to-primary/5">
+                <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-secondary" />
+                    Can I customize my daily goals? ⚖️
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground pb-3">
+                  Absolutely! Click the reset button in your dashboard to set personalized calorie and protein goals based on your fitness objectives, activity level, and dietary preferences.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="missing-food" className="border border-border/30 rounded-lg px-4 bg-gradient-to-r from-accent/5 to-primary/5">
+                <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <Utensils className="h-4 w-4 text-accent" />
+                    What if I can't find a food item? 🍽️
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground pb-3">
+                  Use our AI food recognition 📸 or the suggestion form! Our database includes thousands of foods, and we regularly add new items based on user requests. You can also describe the food in natural language.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="portions" className="border border-border/30 rounded-lg px-4 bg-gradient-to-r from-primary/5 to-accent/5">
+                <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <Timer className="h-4 w-4 text-primary" />
+                    How do I track multiple servings? 🥄
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground pb-3">
+                  Simply adjust the quantity or weight when adding foods! You can say "3 rotis" or "2 cups of rice" - our smart parser understands natural quantities and measurements.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="camera" className="border border-border/30 rounded-lg px-4 bg-gradient-to-r from-secondary/5 to-accent/5">
+                <AccordionTrigger className="text-sm font-medium hover:no-underline py-3">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-secondary" />
+                    How does food photo recognition work? 📱
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground pb-3">
+                  Just snap a photo of your meal! Our AI analyzes the image to identify food items and estimate portions. It works best with clear, well-lit photos. The rear camera is automatically selected for better quality.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
       </div>
