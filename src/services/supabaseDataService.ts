@@ -71,6 +71,24 @@ export class SupabaseDataService {
     if (error) throw error;
   }
 
+  async updateMeal(mealId: string, meal: Partial<Omit<DatabaseMeal, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<DatabaseMeal> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('meals')
+      .update({
+        ...meal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', mealId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  }
+
   // Goals
   async getUserGoals(): Promise<UserGoals | null> {
     const { data, error } = await supabase

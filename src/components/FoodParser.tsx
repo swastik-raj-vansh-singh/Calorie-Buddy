@@ -235,15 +235,58 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       const weights: Record<string, string> = {};
       const units: Record<string, string> = {};
 
+      // Create an array to store auto-detected items for nutrition calculation
+      const autoDetectedItems = [];
+      
       smartItems.forEach((item: ParsedFoodItem) => {
         // Pre-fill with parsed data
         if (item.hasQuantity && item.weight) {
           weights[item.name] = item.weight.toString();
+          // Add to list for nutrition calculation
+          autoDetectedItems.push(item);
         } else {
           weights[item.name] = "";
         }
         units[item.name] = item.unit;
       });
+      
+      // Calculate nutrition for auto-detected items
+      if (autoDetectedItems.length > 0) {
+        setTimeout(async () => {
+          const calculatedItems = [];
+          
+          for (const item of autoDetectedItems) {
+            try {
+              const nutritionData = await calculateNutritionForItem(
+                item.name, 
+                item.weight?.toString() || "100", 
+                item.unit
+              );
+              
+              if (nutritionData) {
+                calculatedItems.push({
+                  id: Date.now() + Math.random(),
+                  name: `${item.name} (${item.weight} ${item.unit})`,
+                  calories: nutritionData.nutrition.calories,
+                  protein: nutritionData.nutrition.protein,
+                  type: selectedMealType,
+                  weight: parseFloat(item.weight?.toString() || "100"),
+                  carbs: nutritionData.nutrition.carbs,
+                  fat: nutritionData.nutrition.fat,
+                  fiber: nutritionData.nutrition.fiber,
+                  aiEnhanced: true,
+                });
+              }
+            } catch (error) {
+              console.error(`Error pre-calculating nutrition for ${item.name}:`, error);
+            }
+          }
+          
+          if (calculatedItems.length > 0) {
+            onItemsCalculated(calculatedItems);
+          }
+        }, 500);
+      }
 
       setItemWeights(weights);
       setSelectedUnits(units);
@@ -321,6 +364,22 @@ export const FoodParser: React.FC<FoodParserProps> = ({
       ...prev,
       [itemName]: unit,
     }));
+  };
+
+  const calculateNutritionForItem = async (itemName: string, weightStr: string, unitStr: string) => {
+    const weight = parseFloat(weightStr) || 100;
+    const unit = unitStr || "grams";
+    
+    try {
+      return await openaiService.getNutritionData(
+        itemName,
+        weight,
+        unit
+      );
+    } catch (error) {
+      console.error(`Error calculating nutrition for ${itemName}:`, error);
+      return null;
+    }
   };
 
   const calculateAllNutrition = async () => {
@@ -484,12 +543,47 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                         </div>
                       </div>
 
+                      {/* Display quantity info for auto-detected items */}
                       {item.hasQuantity && (
-                        <div className="text-xs sm:text-sm text-green-600 flex items-center gap-1 mt-2">
-                          ✅ Quantity already specified: {item.weight}
-                          {item.unit}
+                        <div className="text-xs sm:text-sm text-green-600 flex items-center gap-2 mt-2 justify-between border-t border-green-100 pt-2">
+                          <div>
+                            ✅ Quantity already specified: {item.weight}
+                            {item.unit}
+                          </div>
                         </div>
                       )}
+                      
+                      {/* Edit Quantity/Size button for all food items */}
+                      <div className="mt-3 border-t border-green-200 pt-2">
+                        <div className="text-center text-sm text-green-700 mb-2 font-bold animate-bounce">👇 CLICK TO EDIT QUANTITY 👇</div>
+                        <Button 
+                          variant="default" 
+                          size="lg" 
+                          className="w-full h-14 text-lg bg-green-500 hover:bg-green-600 text-white font-extrabold shadow-xl flex items-center justify-center gap-3 border-4 border-green-300 rounded-xl" 
+                          onClick={() => {
+                            // For auto-detected items, use their weight/unit as starting point
+                            if (item.hasQuantity) {
+                              handleWeightChange(item.name, item.weight?.toString() || "");
+                              handleUnitChange(item.name, item.unit);
+                              // Mark as no longer auto-detected so user can edit
+                              const updatedItems = [...parsedItems];
+                              const itemIndex = updatedItems.findIndex(i => i.name === item.name);
+                              if (itemIndex !== -1) {
+                                updatedItems[itemIndex].hasQuantity = false;
+                                setParsedItems(updatedItems);
+                              }
+                            }
+                            // For non-auto-detected items, just focus on the input field
+                            else if (!itemWeights[item.name]) {
+                              // Set a default value if none exists
+                              handleWeightChange(item.name, "1");
+                            }
+                          }}
+                        >
+                          <span style={{ fontSize: '1.5rem' }}>✏️</span>
+                          <span>EDIT QUANTITY/SIZE</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>

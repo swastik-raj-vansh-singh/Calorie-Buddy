@@ -991,14 +991,6 @@ const Index = () => {
                                 <Badge variant="outline" className="text-xs mt-1">Edited</Badge>
                               )}
                             </div>
-                            <Button
-                              onClick={() => handleEditMeal(meal)}
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 hover:bg-primary/10"
-                            >
-                              <Plus className="h-4 w-4 rotate-45" />
-                            </Button>
                           </div>
                         </div>
                       ))
