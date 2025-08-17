@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GeminiNutritionService } from '@/services/geminiService';
+import { InputParsingService } from '@/services/inputParsingService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, X } from 'lucide-react';
 
 interface ParsedFoodItem {
   name: string;
   unit: string;
-  weight?: number;
+  weight?: string | number;
   hasQuantity: boolean;
   prompt: string;
   dropdownOptions: string[];
@@ -39,20 +40,22 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   const { toast } = useToast();
 
   const geminiService = new GeminiNutritionService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
+  const inputParsingService = new InputParsingService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
 
-  // Smart unit detection logic
+  // Enhanced smart unit detection with glass support
   const getSmartUnitForFood = (foodName: string): { unit: string; prompt: string; dropdownOptions: string[] } => {
     const food = foodName.toLowerCase();
     
-    // Drinks/Liquids
-    if (food.includes('coke') || food.includes('cola') || food.includes('juice') || 
-        food.includes('milk') || food.includes('water') || food.includes('tea') || 
-        food.includes('coffee') || food.includes('beer') || food.includes('wine') || 
-        food.includes('soda') || food.includes('drink')) {
+    // Drinks/Liquids - Glass as primary unit
+    if (food.includes('chai') || food.includes('tea') || food.includes('coffee') ||
+        food.includes('coke') || food.includes('cola') || food.includes('juice') || 
+        food.includes('milk') || food.includes('water') || food.includes('beer') || 
+        food.includes('wine') || food.includes('soda') || food.includes('drink') ||
+        food.includes('lassi') || food.includes('smoothie')) {
       return {
-        unit: 'ml',
-        prompt: `How many milliliters of ${foodName} did you have?`,
-        dropdownOptions: ['ml', 'grams', 'quantity', 'slices', 'size', 'teaspoon']
+        unit: 'glass',
+        prompt: `Quantity`,
+        dropdownOptions: ['glass', 'ml', 'quantity', 'grams', 'slices', 'teaspoon']
       };
     }
     
@@ -60,7 +63,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     if (food.includes('pizza')) {
       return {
         unit: 'size',
-        prompt: `What was the pizza size?`,
+        prompt: `Size`,
         dropdownOptions: ['small', 'medium', 'regular', 'large']
       };
     }
@@ -70,62 +73,41 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         food.includes('egg') || food.includes('banana') || food.includes('apple') || 
         food.includes('chole bhature') || food.includes('idli') || food.includes('vada') ||
         food.includes('paratha') || food.includes('naan') || food.includes('chapati') ||
-        food.includes('roti')) {
+        food.includes('roti') || food.includes('burger') || food.includes('sandwich') ||
+        food.includes('chips') || food.includes('cookie') || food.includes('biscuit')) {
       return {
         unit: 'quantity',
-        prompt: `How many ${foodName}s did you have?`,
-        dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+        prompt: `Quantity`,
+        dropdownOptions: ['quantity', 'grams', 'glass', 'ml', 'slices', 'teaspoon']
       };
     }
     
-    // Cheese
-    if (food.includes('cheese')) {
+    // Cheese and sliceable items
+    if (food.includes('cheese') || food.includes('bread') || food.includes('cake')) {
       return {
         unit: 'slices',
-        prompt: `How many slices of ${foodName} did you have?`,
-        dropdownOptions: ['slices', 'grams', 'ml', 'quantity', 'size', 'teaspoon']
+        prompt: `Slices`,
+        dropdownOptions: ['slices', 'grams', 'quantity', 'glass', 'ml', 'teaspoon']
       };
-    }
-    
-    // Ice cream (detect type)
-    if (food.includes('ice cream')) {
-      if (food.includes('cone')) {
-        return {
-          unit: 'quantity',
-          prompt: `How many ice cream cones did you have?`,
-          dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
-        };
-      } else if (food.includes('tub') || food.includes('container')) {
-        return {
-          unit: 'grams',
-          prompt: `How many grams of ${foodName} did you have?`,
-          dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
-        };
-      } else {
-        return {
-          unit: 'quantity',
-          prompt: `How many servings of ${foodName} did you have?`,
-          dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
-        };
-      }
     }
     
     // Spices and condiments
     if (food.includes('sugar') || food.includes('salt') || food.includes('oil') || 
         food.includes('honey') || food.includes('jam') || food.includes('sauce') ||
-        food.includes('spice') || food.includes('masala') || food.includes('powder')) {
+        food.includes('spice') || food.includes('masala') || food.includes('powder') ||
+        food.includes('ghee') || food.includes('butter')) {
       return {
         unit: 'teaspoon',
-        prompt: `How many teaspoons of ${foodName} did you use?`,
-        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'size']
+        prompt: `Teaspoons`,
+        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'glass']
       };
     }
     
     // Default to grams for solids
     return {
       unit: 'grams',
-      prompt: `How many grams of ${foodName} did you have?`,
-      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
+      prompt: `Weight (grams)`,
+      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'glass', 'teaspoon']
     };
   };
 
@@ -135,96 +117,42 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     setIsParsing(true);
     
     try {
-      // Check if it's a single food item or multiple
-      const isSingleItem = !foodDescription.includes(' and ') && 
-                          !foodDescription.includes(',') && 
-                          !foodDescription.includes(' with ') &&
-                          foodDescription.split(' ').length <= 3;
-
-      if (isSingleItem) {
-        // Handle single food item directly with smart unit detection
-        const smartUnit = getSmartUnitForFood(foodDescription.trim());
-        const singleItem = {
-          name: foodDescription.trim(),
-          unit: smartUnit.unit,
-          hasQuantity: false,
-          weight: undefined,
-          prompt: smartUnit.prompt,
-          dropdownOptions: smartUnit.dropdownOptions
-        };
+      // Use AI-powered input parsing to extract quantities and units
+      const parsedInput = await inputParsingService.parseUserInput(foodDescription);
+      
+      const smartItems = parsedInput.items.map((item) => {
+        const smartUnit = getSmartUnitForFood(item.name);
         
-        setParsedItems([singleItem]);
-        setItemWeights({ [singleItem.name]: '' });
-        setSelectedUnits({ [singleItem.name]: singleItem.unit });
-        setHasParsed(true);
-        setIsParsing(false);
-        return;
-      }
-
-      const parsePrompt = `
-      The user said: "${foodDescription}".
-      
-      Break this down into individual food components and extract just the food names.
-      Return ONLY a JSON array of food names like: ["pizza", "coke", "gulab jamun"]
-      `;
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: parsePrompt
-            }]
-          }]
-        })
-      });
-
-      const data = await response.json();
-      
-      // Handle API errors
-      if (data.error) {
-        throw new Error(`Gemini API error: ${data.error.message}`);
-      }
-      
-      // Check if the response has the expected structure
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
-        throw new Error('Invalid response structure from Gemini API');
-      }
-      
-      const text = data.candidates[0].content.parts[0].text;
-      
-      const jsonMatch = text.match(/\[[\s\S]*?\]/);
-      if (!jsonMatch) {
-        throw new Error('Invalid response format');
-      }
-
-      const foodNames = JSON.parse(jsonMatch[0]);
-      
-      // Apply smart unit detection to each food item
-      const smartItems = foodNames.map((name: string) => {
-        const smartUnit = getSmartUnitForFood(name);
+        // Use parsed quantity and unit if available, otherwise use smart defaults
+        const finalUnit = item.unit || smartUnit.unit;
+        const finalQuantity = item.quantity || '';
+        
         return {
-          name,
-          unit: smartUnit.unit,
-          hasQuantity: false,
-          weight: undefined,
+          name: item.name,
+          unit: finalUnit,
+          hasQuantity: !!item.quantity,
+          weight: finalQuantity,
           prompt: smartUnit.prompt,
-          dropdownOptions: smartUnit.dropdownOptions
+          dropdownOptions: item.unit === 'size' ? ['small', 'medium', 'regular', 'large'] : smartUnit.dropdownOptions
         };
       });
       
       setParsedItems(smartItems);
       
-      // Initialize weights and units
+      // Pre-fill weights and units based on AI parsing
       const weights: Record<string, string> = {};
       const units: Record<string, string> = {};
+      
       smartItems.forEach((item: ParsedFoodItem) => {
-        weights[item.name] = '';
+        // Pre-fill with parsed data
+        if (item.hasQuantity && item.weight) {
+          weights[item.name] = item.weight.toString();
+        } else {
+          weights[item.name] = '';
+        }
         units[item.name] = item.unit;
       });
+      
       setItemWeights(weights);
       setSelectedUnits(units);
       setHasParsed(true);
@@ -232,18 +160,10 @@ export const FoodParser: React.FC<FoodParserProps> = ({
     } catch (error) {
       console.error('Error parsing food description:', error);
       
-      // Show user-friendly error message
-      toast({
-        title: "AI Service Temporarily Unavailable",
-        description: "Using fallback parsing...",
-        variant: "destructive",
-      });
-      
-      // Fallback: try to parse manually
+      // Fallback to basic parsing
       const words = foodDescription.toLowerCase().split(/[\s,]+/);
       const fallbackItems = [];
       
-      // Simple detection patterns with smart units
       if (words.includes('pizza')) {
         const smartUnit = getSmartUnitForFood('pizza');
         fallbackItems.push({ name: 'pizza', ...smartUnit, hasQuantity: false, weight: undefined });
@@ -257,21 +177,27 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         fallbackItems.push({ name: 'roti', ...smartUnit, hasQuantity: false, weight: undefined });
       }
       
-      if (fallbackItems.length > 0) {
-        setParsedItems(fallbackItems);
-        const weights: Record<string, string> = {};
-        const units: Record<string, string> = {};
-        fallbackItems.forEach((item: any) => {
-          weights[item.name] = '';
-          units[item.name] = item.unit;
+      if (fallbackItems.length === 0) {
+        // Treat entire input as single food item
+        const smartUnit = getSmartUnitForFood(foodDescription.trim());
+        fallbackItems.push({ 
+          name: foodDescription.trim(), 
+          ...smartUnit, 
+          hasQuantity: false, 
+          weight: undefined 
         });
-        setItemWeights(weights);
-        setSelectedUnits(units);
-        setHasParsed(true);
-      } else {
-        setParsedItems([]);
-        setHasParsed(true);
       }
+      
+      setParsedItems(fallbackItems);
+      const weights: Record<string, string> = {};
+      const units: Record<string, string> = {};
+      fallbackItems.forEach((item: any) => {
+        weights[item.name] = '';
+        units[item.name] = item.unit;
+      });
+      setItemWeights(weights);
+      setSelectedUnits(units);
+      setHasParsed(true);
     } finally {
       setIsParsing(false);
     }
@@ -377,13 +303,15 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="font-medium text-foreground capitalize">{item.name}</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          Smart Unit: {selectedUnits[item.name] || item.unit}
-                        </Badge>
+                        {item.hasQuantity && (
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            ✓ Auto-detected
+                          </Badge>
+                        )}
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">
+                        <label className="text-sm text-muted-foreground font-medium">
                           {item.prompt}
                         </label>
                         

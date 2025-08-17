@@ -37,19 +37,20 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   const getSmartUnitForFood = (name: string) => {
     const lowerName = name.toLowerCase();
     
-    // Drinks/Liquids
-    if (lowerName.includes('coke') || lowerName.includes('cola') || lowerName.includes('juice') || 
-        lowerName.includes('milk') || lowerName.includes('water') || lowerName.includes('tea') || 
-        lowerName.includes('coffee') || lowerName.includes('beer') || lowerName.includes('wine') || 
-        lowerName.includes('soda') || lowerName.includes('drink')) {
+    // Drinks/Liquids - Add glass as primary option
+    if (lowerName.includes('chai') || lowerName.includes('tea') || lowerName.includes('coffee') ||
+        lowerName.includes('coke') || lowerName.includes('cola') || lowerName.includes('juice') || 
+        lowerName.includes('milk') || lowerName.includes('water') || lowerName.includes('beer') || 
+        lowerName.includes('wine') || lowerName.includes('soda') || lowerName.includes('drink') ||
+        lowerName.includes('lassi') || lowerName.includes('smoothie')) {
       return {
-        defaultUnit: 'ml',
-        defaultWeight: 250,
-        dropdownOptions: ['ml', 'grams', 'quantity', 'slices', 'size', 'teaspoon']
+        defaultUnit: 'glass',
+        defaultWeight: 1,
+        dropdownOptions: ['glass', 'ml', 'quantity', 'grams', 'slices', 'teaspoon']
       };
     }
     
-    // Pizza
+    // Pizza - Use size for whole pizzas
     if (lowerName.includes('pizza')) {
       return {
         defaultUnit: 'size',
@@ -58,36 +59,38 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       };
     }
     
-    // Counted items
+    // Counted items (individual food items)
     if (lowerName.includes('gulab jamun') || lowerName.includes('samosa') || lowerName.includes('dosa') || 
         lowerName.includes('egg') || lowerName.includes('banana') || lowerName.includes('apple') || 
         lowerName.includes('chole bhature') || lowerName.includes('idli') || lowerName.includes('vada') ||
         lowerName.includes('paratha') || lowerName.includes('naan') || lowerName.includes('chapati') ||
-        lowerName.includes('roti')) {
+        lowerName.includes('roti') || lowerName.includes('burger') || lowerName.includes('sandwich') ||
+        lowerName.includes('chips') || lowerName.includes('cookie') || lowerName.includes('biscuit')) {
       return {
         defaultUnit: 'quantity',
         defaultWeight: 1,
-        dropdownOptions: ['quantity', 'grams', 'ml', 'slices', 'size', 'teaspoon']
+        dropdownOptions: ['quantity', 'grams', 'glass', 'ml', 'slices', 'teaspoon']
       };
     }
     
-    // Cheese
-    if (lowerName.includes('cheese')) {
+    // Cheese and sliceable items
+    if (lowerName.includes('cheese') || lowerName.includes('bread') || lowerName.includes('cake')) {
       return {
         defaultUnit: 'slices',
         defaultWeight: 2,
-        dropdownOptions: ['slices', 'grams', 'ml', 'quantity', 'size', 'teaspoon']
+        dropdownOptions: ['slices', 'grams', 'quantity', 'glass', 'ml', 'teaspoon']
       };
     }
     
     // Spices and condiments
     if (lowerName.includes('sugar') || lowerName.includes('salt') || lowerName.includes('oil') || 
         lowerName.includes('honey') || lowerName.includes('jam') || lowerName.includes('sauce') ||
-        lowerName.includes('spice') || lowerName.includes('masala') || lowerName.includes('powder')) {
+        lowerName.includes('spice') || lowerName.includes('masala') || lowerName.includes('powder') ||
+        lowerName.includes('ghee') || lowerName.includes('butter')) {
       return {
         defaultUnit: 'teaspoon',
         defaultWeight: 1,
-        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'size']
+        dropdownOptions: ['teaspoon', 'grams', 'ml', 'quantity', 'slices', 'glass']
       };
     }
     
@@ -95,7 +98,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
     return {
       defaultUnit: 'grams',
       defaultWeight: 100,
-      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'size', 'teaspoon']
+      dropdownOptions: ['grams', 'ml', 'quantity', 'slices', 'glass', 'teaspoon']
     };
   };
 
@@ -108,10 +111,11 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
 
   const geminiService = new GeminiNutritionService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
 
-  // Get numeric weight for API calls
-  const getNumericWeight = () => {
+  // Get numeric weight for API calls - Let AI handle size conversions
+  const getNumericWeight = (): any => {
     if (typeof weight === 'string') {
-      if (selectedUnit === 'size') return weight === 'small' ? 200 : weight === 'medium' ? 350 : weight === 'large' ? 500 : 350;
+      // For size units, pass the string directly - AI will interpret correctly
+      if (selectedUnit === 'size') return weight;
       return parseFloat(weight) || 100;
     }
     return weight;
@@ -167,7 +171,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
         carbs: aiData.nutrition.carbs,
         fat: aiData.nutrition.fat,
         fiber: aiData.nutrition.fiber,
-        weight: getNumericWeight(),
+        weight: typeof getNumericWeight() === 'string' ? 1 : getNumericWeight(),
         unit: selectedUnit,
         aiEnhanced: true
       });
@@ -240,6 +244,19 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
 
         {/* Quick Select Buttons */}
         <div className="flex gap-2 justify-center flex-wrap">
+          {selectedUnit === 'glass' && 
+            [1, 2, 3, 4].map((w) => (
+              <Button
+                key={w}
+                variant="outline"
+                size="sm"
+                onClick={() => setWeight(w)}
+                className={weight === w ? "bg-primary text-primary-foreground" : ""}
+              >
+                {w} glass{w > 1 ? 'es' : ''}
+              </Button>
+            ))
+          }
           {selectedUnit === 'ml' && 
             [100, 200, 250, 300, 500].map((w) => (
               <Button

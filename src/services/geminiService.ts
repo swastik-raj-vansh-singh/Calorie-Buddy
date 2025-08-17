@@ -28,70 +28,101 @@ export class GeminiNutritionService {
     // Create natural quantity descriptions based on unit
     switch (unit.toLowerCase()) {
       case 'quantity':
-        quantityDescription = `${weight} ${weight === 1 ? 'piece' : 'pieces'} of ${foodName}`;
+        quantityDescription = `${weight} whole ${weight === 1 ? 'piece' : 'pieces'} of ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Important context:
-        - This is ${weight} individual ${weight === 1 ? 'item' : 'items'} of ${foodName}
-        - For foods like roti, chapati, samosa, idli, dosa etc., calculate based on standard/typical size
-        - For items like pizza, consider it as ${weight} ${weight === 1 ? 'slice' : 'slices'} of medium pizza unless specified otherwise
-        - Don't convert to weight - calculate nutrition for the actual ${weight} ${weight === 1 ? 'piece' : 'pieces'}
+        CRITICAL CONTEXT:
+        - This means ${weight} complete, whole ${weight === 1 ? 'item' : 'items'} of ${foodName}
+        - For roti/chapati: standard Indian roti (6-7 inches, ~30g each)
+        - For samosa: typical Indian samosa (medium size, ~50g each)
+        - For idli: standard South Indian idli (~30g each)
+        - For dosa: regular plain dosa (~60g each)
+        - For burger: complete burger with bun and fillings
+        - For pizza slice: regular triangular slice from 12-inch pizza
+        - Calculate nutrition for exactly ${weight} complete ${weight === 1 ? 'serving' : 'servings'}
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        Think step by step: "${quantityDescription}" means total nutrition from all ${weight} items combined.
         `;
         break;
 
       case 'size':
-        quantityDescription = `${weight} ${foodName}`;
+        quantityDescription = `1 ${weight}-sized ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Important context:
-        - This refers to size-based portions (small/medium/large)
-        - For pizza: calculate for the specified size (small = ~200g slice, medium = ~300g slice, large = ~400g slice)
-        - For other items, use standard size portions
+        CRITICAL PIZZA SIZE CONTEXT (if ${foodName} contains "pizza"):
+        - Small pizza: 8-10 inches diameter, entire pizza = ~800-1200 calories
+        - Medium pizza: 12 inches diameter, entire pizza = ~1500-2000 calories  
+        - Large pizza: 14 inches diameter, entire pizza = ~2200-2800 calories
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        For other foods, interpret size as:
+        - Small: 70% of standard portion
+        - Medium/Regular: Standard portion size
+        - Large: 140% of standard portion
+        
+        Calculate nutrition for exactly 1 complete ${weight}-sized ${foodName}.
+        `;
+        break;
+
+      case 'glass':
+        quantityDescription = `${weight} ${weight === 1 ? 'glass' : 'glasses'} of ${foodName}`;
+        contextualPrompt = `
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
+        
+        CRITICAL GLASS SIZE CONTEXT:
+        - 1 glass = typical Indian glass size (~200-250ml)
+        - For chai/tea: standard Indian chai glass
+        - For juice: regular drinking glass
+        - For milk: standard milk glass
+        - For water: standard water glass
+        
+        Calculate nutrition for exactly ${weight} ${weight === 1 ? 'glass' : 'glasses'} (${weight * 225}ml approximately).
         `;
         break;
 
       case 'slices':
         quantityDescription = `${weight} ${weight === 1 ? 'slice' : 'slices'} of ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Important context:
+        CRITICAL CONTEXT:
         - This is ${weight} standard ${weight === 1 ? 'slice' : 'slices'} of ${foodName}
-        - Use typical slice thickness and size for the food item
+        - For bread: standard slice thickness (~25g each)
+        - For cheese: typical slice thickness (~20g each)
+        - For fruits: medium slice thickness
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        Calculate nutrition for exactly ${weight} ${weight === 1 ? 'slice' : 'slices'}.
         `;
         break;
 
       case 'ml':
         quantityDescription = `${weight}ml of ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Important context:
-        - This is a liquid measurement
-        - Calculate based on the liquid volume, not weight
+        CRITICAL CONTEXT:
+        - This is exactly ${weight} milliliters of liquid ${foodName}
+        - Calculate based on liquid volume, not weight
+        - For thick liquids (like lassi), account for density
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        Calculate nutrition for exactly ${weight}ml of ${foodName}.
         `;
         break;
 
       case 'teaspoon':
         quantityDescription = `${weight} ${weight === 1 ? 'teaspoon' : 'teaspoons'} of ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Important context:
-        - This is a volume measurement (1 teaspoon ≈ 5ml)
-        - Usually used for spices, sugar, oil, etc.
+        CRITICAL CONTEXT:
+        - 1 teaspoon = exactly 5ml volume
+        - For sugar: ~4g per teaspoon
+        - For oil: ~4.5g per teaspoon  
+        - For honey: ~7g per teaspoon
+        - For spices: varies by density
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        Calculate nutrition for exactly ${weight} ${weight === 1 ? 'teaspoon' : 'teaspoons'}.
         `;
         break;
 
@@ -99,9 +130,9 @@ export class GeminiNutritionService {
       default:
         quantityDescription = `${weight}g of ${foodName}`;
         contextualPrompt = `
-        I need accurate nutrition information for ${quantityDescription}.
+        You are a professional nutritionist calculating precise nutrition for: ${quantityDescription}.
         
-        Calculate nutrition as if you were asked: "What's the nutrition in ${quantityDescription}?"
+        Calculate nutrition for exactly ${weight} grams of ${foodName}.
         `;
         break;
     }
@@ -109,22 +140,28 @@ export class GeminiNutritionService {
     return `
     ${contextualPrompt}
     
+    INSTRUCTIONS:
+    - Use USDA nutrition database values where possible
+    - For Indian foods, use authentic traditional recipes and standard serving sizes
+    - Consider actual food density, preparation methods, and typical ingredients
+    - All values must be realistic and accurate for ${quantityDescription}
+    - Double-check your calculations - this is for a nutrition tracking app
+    
     Return ONLY a JSON object in this exact format:
     {
       "nutrition": {
-        "calories": <number>,
-        "protein": <number>,
-        "carbs": <number>,
-        "fat": <number>,
-        "fiber": <number>,
-        "sugar": <number>
+        "calories": <precise number>,
+        "protein": <precise number in grams>,
+        "carbs": <precise number in grams>,
+        "fat": <precise number in grams>,
+        "fiber": <precise number in grams>,
+        "sugar": <precise number in grams>
       },
-      "confidence": <number between 0-1>
+      "confidence": <number between 0.8-1.0 (be confident in standard foods)>
     }
     
-    Ensure all values are accurate and based on reliable nutrition databases like USDA. 
-    For Indian foods, use authentic recipes and ingredients.
-    Be precise with portion sizes - ${quantityDescription} should give realistic, accurate values.
+    Example: For "2 medium rotis", calculate total nutrition for both rotis combined.
+    Example: For "1 large pizza", calculate nutrition for entire large pizza.
     `;
   }
 
