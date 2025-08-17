@@ -6,7 +6,10 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+// Time to keep the toast in the DOM after it is dismissed, so the slide-out animation can play fully
+const TOAST_REMOVE_DELAY = 1000
+// Default time (in ms) the toast stays visible before auto-dismiss
+const DEFAULT_TOAST_DURATION = 3000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -154,6 +157,8 @@ function toast({ ...props }: Toast) {
     toast: {
       ...props,
       id,
+      // auto-dismiss after 3 seconds unless overridden per-toast
+      duration: props.duration ?? DEFAULT_TOAST_DURATION,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
