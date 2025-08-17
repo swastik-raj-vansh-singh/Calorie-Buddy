@@ -15,7 +15,7 @@ import { HelpSection } from '@/components/HelpSection';
 import { WeightCalculator } from '@/components/WeightCalculator';
 import { FoodParser } from '@/components/FoodParser';
 import { ImageFoodRecognition } from '@/components/ImageFoodRecognition';
-import { GeminiNutritionService } from '@/services/geminiService';
+import { EnhancedOpenAIService } from '@/services/enhancedOpenAIService';
 import { useAuth } from '@/hooks/useAuth';
 import { SupabaseDataService, DatabaseMeal } from '@/services/supabaseDataService';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +31,9 @@ interface Meal {
   fat?: number;
   fiber?: number;
   aiEnhanced?: boolean;
+  quantity?: number;
+  originalQuantity?: number;
+  isEdited?: boolean;
 }
 
 const Index = () => {
@@ -64,10 +67,14 @@ const Index = () => {
   const [showWeightCalculator, setShowWeightCalculator] = useState(false);
   const [showFoodParser, setShowFoodParser] = useState(false);
   const [showImageRecognition, setShowImageRecognition] = useState(false);
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [showMealEditor, setShowMealEditor] = useState(false);
   
   // Services
   const dataService = new SupabaseDataService();
-  const geminiService = new GeminiNutritionService(import.meta.env.VITE_GEMINI_API_KEY);
+  const enhancedOpenaiService = new EnhancedOpenAIService(import.meta.env.VITE_OPENAI_API_KEY);
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -242,18 +249,24 @@ const Index = () => {
   const handleFoodSearch = async () => {
     if (!searchTerm.trim()) return;
 
-    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
-    const isComplexDescription = complexIndicators.some(indicator => 
-      searchTerm.toLowerCase().includes(indicator)
-    ) || searchTerm.split(' ').length > 3;
-
-    if (isComplexDescription) {
-      setShowFoodParser(true);
-      setIsAddingMeal(false);
-    } else {
-      setSelectedFoodName(searchTerm);
-      setShowWeightCalculator(true);
-      setIsAddingMeal(false);
+    setIsSearching(true);
+    try {
+      const result = await enhancedOpenaiService.parseAndEstimateNutrition(searchTerm);
+      setSearchResults(result);
+      
+      toast({
+        title: "Food analyzed successfully!",
+        description: `Found ${result.items.length} item(s) with ${result.total_calories} total calories`,
+      });
+    } catch (error) {
+      console.error('Error searching for food:', error);
+      toast({
+        title: "Search failed",
+        description: "Please try again or use manual entry",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -358,21 +371,111 @@ const Index = () => {
     showCalorieConsumptionAlert(totalCalories, totalProtein, newCaloriesConsumed);
   };
 
+  const handleAddSearchItem = async (item: any) => {
+    const newMeal: Meal = {
+      id: Date.now(),
+      name: `${item.name} (${item.quantity} ${item.unit})`,
+      calories: item.estimated_calories,
+      protein: item.protein || 0,
+      type: selectedMealType,
+      carbs: item.carbs || 0,
+      fat: item.fat || 0,
+      fiber: item.fiber || 0,
+      aiEnhanced: true,
+      quantity: item.quantity,
+      originalQuantity: item.quantity
+    };
+
+    // Save to database if user is authenticated
+    if (user) {
+      try {
+        await dataService.addMeal({
+          name: newMeal.name,
+          calories: newMeal.calories,
+          protein: newMeal.protein,
+          meal_type: newMeal.type,
+          carbs: newMeal.carbs,
+          fat: newMeal.fat,
+          fiber: newMeal.fiber,
+        });
+      } catch (error) {
+        console.error('Error saving meal:', error);
+        toast({
+          title: "Error saving meal",
+          description: "There was an issue saving your meal. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const newCaloriesConsumed = caloriesConsumed + item.estimated_calories;
+    const newProteinConsumed = proteinConsumed + (item.protein || 0);
+    
+    setTodayMeals([...todayMeals, newMeal]);
+    setCaloriesConsumed(newCaloriesConsumed);
+    setProteinConsumed(newProteinConsumed);
+
+    toast({
+      title: "Meal added successfully!",
+      description: `Added ${item.name} (${item.estimated_calories} calories, ${item.protein || 0}g protein)`,
+    });
+  };
+
+  const handleEditMeal = (meal: Meal) => {
+    setEditingMeal(meal);
+    setShowMealEditor(true);
+  };
+
+  const handleSaveEditedMeal = async (updatedMeal: Meal) => {
+    // Update in database if user is authenticated
+    if (user) {
+      try {
+        await dataService.updateMeal(updatedMeal.id.toString(), {
+          name: updatedMeal.name,
+          calories: updatedMeal.calories,
+          protein: updatedMeal.protein,
+          meal_type: updatedMeal.type,
+          carbs: updatedMeal.carbs,
+          fat: updatedMeal.fat,
+          fiber: updatedMeal.fiber,
+        });
+      } catch (error) {
+        console.error('Error updating meal:', error);
+        toast({
+          title: "Error updating meal",
+          description: "There was an issue updating your meal. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Update local state
+    const updatedMeals = todayMeals.map(meal => 
+      meal.id === updatedMeal.id ? { ...updatedMeal, isEdited: true } : meal
+    );
+    setTodayMeals(updatedMeals);
+
+    // Recalculate totals
+    const newCaloriesConsumed = updatedMeals.reduce((sum, meal) => sum + meal.calories, 0);
+    const newProteinConsumed = updatedMeals.reduce((sum, meal) => sum + meal.protein, 0);
+    setCaloriesConsumed(newCaloriesConsumed);
+    setProteinConsumed(newProteinConsumed);
+
+    setShowMealEditor(false);
+    setEditingMeal(null);
+
+    toast({
+      title: "Meal updated successfully!",
+      description: `Updated ${updatedMeal.name}`,
+    });
+  };
+
   const handleImageFoodDetected = (foodDescription: string) => {
     setSearchTerm(foodDescription);
     setShowImageRecognition(false);
-    
-    const complexIndicators = ['and', 'with', ',', '+', 'plus', 'also', 'along with'];
-    const isComplexDescription = complexIndicators.some(indicator => 
-      foodDescription.toLowerCase().includes(indicator)
-    ) || foodDescription.split(' ').length > 3;
-
-    if (isComplexDescription) {
-      setShowFoodParser(true);
-    } else {
-      setSelectedFoodName(foodDescription);
-      setShowWeightCalculator(true);
-    }
+    handleFoodSearch();
   };
 
   const handleWelcomeNext = () => {
@@ -877,12 +980,25 @@ const Index = () => {
                               <p className="text-xs text-foreground/60 capitalize">{meal.type}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
-                            <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
-                            {meal.weight && (
-                              <p className="text-xs text-foreground/40">{meal.weight}g</p>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
+                              <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
+                              {meal.weight && (
+                                <p className="text-xs text-foreground/40">{meal.weight}g</p>
+                              )}
+                              {meal.isEdited && (
+                                <Badge variant="outline" className="text-xs mt-1">Edited</Badge>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() => handleEditMeal(meal)}
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-primary/10"
+                            >
+                              <Plus className="h-4 w-4 rotate-45" />
+                            </Button>
                           </div>
                         </div>
                       ))
@@ -932,7 +1048,7 @@ const Index = () => {
             <div className="space-y-4">
               <div className="relative">
                 <Input
-                  placeholder="Type any food item (e.g., cheese burger with extra cheese and 100ml coke)"
+                  placeholder="Write food items with quantity for accurate results (e.g., '2 rotis with dal', '1 cup chai with sugar')"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleFoodSearch()}
@@ -955,13 +1071,91 @@ const Index = () => {
                     onClick={handleFoodSearch}
                     size="sm"
                     className="h-8"
-                    disabled={!searchTerm.trim()}
+                    disabled={!searchTerm.trim() || isSearching}
                   >
-                    <Search className="h-4 w-4 mr-1" />
-                    Search
+                    {isSearching ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-1" />
+                        Search
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
+
+              {/* Search Results */}
+              {searchResults && (
+                <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-foreground">Nutrition Analysis</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      {searchResults.confidence > 0.8 ? 'High Confidence' : 
+                       searchResults.confidence > 0.6 ? 'Medium Confidence' : 'Low Confidence'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {searchResults.items.map((item: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
+                        <div className="flex-1">
+                          <div className="font-medium text-foreground capitalize">
+                            {item.name} ({item.quantity} {item.unit})
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {item.estimated_calories} cal • {item.protein || 0}g protein • {item.carbs || 0}g carbs • {item.fat || 0}g fat
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => handleAddSearchItem(item)}
+                          size="sm"
+                          className="ml-3"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                    ))}
+                    
+                    <div className="pt-2 border-t border-border/30">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-foreground">Total:</span>
+                        <span className="font-bold text-primary">{searchResults.total_calories} calories</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        onClick={() => {
+                          searchResults.items.forEach((item: any) => handleAddSearchItem(item));
+                          setSearchResults(null);
+                          setSearchTerm('');
+                          setIsAddingMeal(false);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Add All Items
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setSearchResults(null);
+                          setSearchTerm('');
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Quick Suggestions */}
               <div className="space-y-3">
@@ -1041,6 +1235,132 @@ const Index = () => {
                 setIsAddingMeal(true);
               }}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Meal Editor Modal */}
+        <Dialog open={showMealEditor} onOpenChange={setShowMealEditor}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Plus className="h-5 w-5 rotate-45 text-primary" />
+                Edit Meal
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Modify the quantity and nutrition will be recalculated
+              </p>
+            </DialogHeader>
+            {editingMeal && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Food Item
+                  </label>
+                  <Input
+                    value={editingMeal.name}
+                    disabled
+                    className="bg-muted/50"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Quantity Multiplier
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        const newQuantity = Math.max(0.1, (editingMeal.quantity || 1) - 0.1);
+                        const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
+                        setEditingMeal({
+                          ...editingMeal,
+                          quantity: newQuantity,
+                          calories: Math.round((editingMeal.calories / (editingMeal.quantity || 1)) * newQuantity),
+                          protein: Math.round((editingMeal.protein / (editingMeal.quantity || 1)) * newQuantity),
+                          carbs: editingMeal.carbs ? Math.round((editingMeal.carbs / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fat: editingMeal.fat ? Math.round((editingMeal.fat / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fiber: editingMeal.fiber ? Math.round((editingMeal.fiber / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                        });
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      -
+                    </Button>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={editingMeal.quantity || 1}
+                      onChange={(e) => {
+                        const newQuantity = parseFloat(e.target.value) || 1;
+                        const originalQuantity = editingMeal.originalQuantity || editingMeal.quantity || 1;
+                        const originalCalories = editingMeal.calories / (editingMeal.quantity || 1) * originalQuantity;
+                        const originalProtein = editingMeal.protein / (editingMeal.quantity || 1) * originalQuantity;
+                        
+                        setEditingMeal({
+                          ...editingMeal,
+                          quantity: newQuantity,
+                          calories: Math.round((originalCalories / originalQuantity) * newQuantity),
+                          protein: Math.round((originalProtein / originalQuantity) * newQuantity),
+                          carbs: editingMeal.carbs ? Math.round((editingMeal.carbs / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fat: editingMeal.fat ? Math.round((editingMeal.fat / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fiber: editingMeal.fiber ? Math.round((editingMeal.fiber / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                        });
+                      }}
+                      className="text-center"
+                    />
+                    <Button
+                      onClick={() => {
+                        const newQuantity = (editingMeal.quantity || 1) + 0.1;
+                        const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
+                        setEditingMeal({
+                          ...editingMeal,
+                          quantity: newQuantity,
+                          calories: Math.round((editingMeal.calories / (editingMeal.quantity || 1)) * newQuantity),
+                          protein: Math.round((editingMeal.protein / (editingMeal.quantity || 1)) * newQuantity),
+                          carbs: editingMeal.carbs ? Math.round((editingMeal.carbs / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fat: editingMeal.fat ? Math.round((editingMeal.fat / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          fiber: editingMeal.fiber ? Math.round((editingMeal.fiber / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                        });
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <h4 className="font-medium text-foreground mb-2">Updated Nutrition</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>Calories: <span className="font-medium">{editingMeal.calories}</span></div>
+                    <div>Protein: <span className="font-medium">{editingMeal.protein}g</span></div>
+                    {editingMeal.carbs && <div>Carbs: <span className="font-medium">{editingMeal.carbs}g</span></div>}
+                    {editingMeal.fat && <div>Fat: <span className="font-medium">{editingMeal.fat}g</span></div>}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleSaveEditedMeal(editingMeal)}
+                    className="flex-1"
+                  >
+                    Save Changes
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowMealEditor(false);
+                      setEditingMeal(null);
+                    }}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Sparkles, Scale } from 'lucide-react';
-import { GeminiNutritionService } from '@/services/geminiService';
+import { OpenAINutritionService } from '@/services/openaiService';
 import { useToast } from '@/hooks/use-toast';
 
 interface WeightCalculatorProps {
@@ -109,7 +109,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   const [aiData, setAiData] = useState<any>(null);
   const { toast } = useToast();
 
-  const geminiService = new GeminiNutritionService(import.meta.env.VITE_GEMINI_API_KEY);
+  const openaiService = new OpenAINutritionService(import.meta.env.VITE_OPENAI_API_KEY);
 
   // Get numeric weight for API calls - Let AI handle size conversions
   const getNumericWeight = (): any => {
@@ -126,8 +126,8 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
     setIsLoadingAI(true);
     try {
       const numericWeight = getNumericWeight();
-      const result = await geminiService.getNutritionData(foodName, numericWeight, selectedUnit);
-      // Set confidence to 100% as user trusts Gemini completely
+      const result = await openaiService.getNutritionData(foodName, numericWeight, selectedUnit);
+      // Set confidence to 100% as user trusts OpenAI completely
       const enhancedResult = {
         ...result,
         confidence: 1.0
@@ -140,7 +140,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
       try {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         const numericWeight = getNumericWeight();
-        const result = await geminiService.getNutritionData(foodName, numericWeight, selectedUnit);
+        const result = await openaiService.getNutritionData(foodName, numericWeight, selectedUnit);
         const enhancedResult = {
           ...result,
           confidence: 1.0

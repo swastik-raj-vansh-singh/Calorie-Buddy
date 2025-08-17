@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GeminiNutritionService } from "@/services/geminiService";
-import { InputParsingService } from "@/services/inputParsingService";
+import { OpenAINutritionService } from "@/services/openaiService";
+import { OpenAIInputParsingService } from "@/services/openaiInputParsingService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, X } from "lucide-react";
 
@@ -47,11 +47,11 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   const [hasParsed, setHasParsed] = useState(false);
   const { toast } = useToast();
 
-  const geminiService = new GeminiNutritionService(
-    import.meta.env.VITE_GEMINI_API_KEY
+  const openaiService = new OpenAINutritionService(
+    import.meta.env.VITE_OPENAI_API_KEY
   );
-  const inputParsingService = new InputParsingService(
-    import.meta.env.VITE_GEMINI_API_KEY
+  const inputParsingService = new OpenAIInputParsingService(
+    import.meta.env.VITE_OPENAI_API_KEY
   );
 
   // Enhanced smart unit detection with glass support
@@ -335,7 +335,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
         const unit = selectedUnits[item.name] || item.unit;
 
         try {
-          const nutritionData = await geminiService.getNutritionData(
+          const nutritionData = await openaiService.getNutritionData(
             item.name,
             weight,
             unit
