@@ -67,7 +67,7 @@ const Index = () => {
   
   // Services
   const dataService = new SupabaseDataService();
-  const geminiService = new GeminiNutritionService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
+  const geminiService = new GeminiNutritionService(import.meta.env.VITE_GEMINI_API_KEY);
 
   // Check mobile on mount and resize
   useEffect(() => {

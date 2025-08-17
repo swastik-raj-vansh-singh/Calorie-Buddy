@@ -117,7 +117,7 @@ export const ImageFoodRecognition: React.FC<ImageFoodRecognitionProps> = ({
       Focus on accuracy - this will be used for precise calorie tracking.
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

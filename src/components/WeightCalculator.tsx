@@ -109,7 +109,7 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   const [aiData, setAiData] = useState<any>(null);
   const { toast } = useToast();
 
-  const geminiService = new GeminiNutritionService('AIzaSyC9TTXCJFHUeRyhW8inLdQ42Fpw1amm1Go');
+  const geminiService = new GeminiNutritionService(import.meta.env.VITE_GEMINI_API_KEY);
 
   // Get numeric weight for API calls - Let AI handle size conversions
   const getNumericWeight = (): any => {
