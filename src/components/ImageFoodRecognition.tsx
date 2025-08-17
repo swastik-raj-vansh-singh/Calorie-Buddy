@@ -173,34 +173,34 @@ export const ImageFoodRecognition: React.FC<ImageFoodRecognitionProps> = ({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto bg-card/95 backdrop-blur-sm border-primary/20 shadow-xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-primary">
+    <Card className="w-full max-w-4xl mx-auto bg-card/95 backdrop-blur-sm border-primary/20 shadow-xl">
+      <CardHeader className="pb-3 sm:pb-4">
+        <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
           📸 Food Recognition
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Take a photo or upload an image to detect food items automatically
         </p>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6">
         {!isCameraOpen && !capturedImage && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Button
               onClick={startCamera}
-              className="h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/20"
+              className="h-24 sm:h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/20 text-xs sm:text-sm"
               variant="outline"
             >
-              <Camera className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium">Take Photo</span>
+              <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              <span className="font-medium">Take Photo</span>
             </Button>
             
             <Button
               onClick={() => fileInputRef.current?.click()}
-              className="h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary/20 to-secondary/10 border-2 border-dashed border-secondary/30 hover:border-secondary/50 hover:bg-secondary/20"
+              className="h-24 sm:h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary/20 to-secondary/10 border-2 border-dashed border-secondary/30 hover:border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm"
               variant="outline"
             >
-              <Upload className="h-8 w-8 text-secondary" />
-              <span className="text-sm font-medium">Upload Image</span>
+              <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-secondary" />
+              <span className="font-medium">Upload Image</span>
             </Button>
           </div>
         )}

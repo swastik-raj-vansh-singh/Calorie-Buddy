@@ -179,12 +179,12 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
   };
 
   return (
-    <div className="space-y-6 p-6 bg-card border border-border rounded-lg">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 bg-card border border-border rounded-lg max-w-2xl mx-auto">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-foreground mb-2">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
           Calculate Nutrition for {foodName}
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Adjust the weight to get accurate nutrition values
         </p>
       </div>

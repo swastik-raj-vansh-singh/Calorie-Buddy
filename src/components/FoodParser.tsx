@@ -276,52 +276,52 @@ export const FoodParser: React.FC<FoodParserProps> = ({
   }, []);
 
   return (
-    <Card className="w-full max-w-2xl mx-auto bg-card/95 backdrop-blur-sm border-primary/20 shadow-xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-primary">
+    <Card className="w-full max-w-4xl mx-auto bg-card/95 backdrop-blur-sm border-primary/20 shadow-xl">
+      <CardHeader className="pb-3 sm:pb-4">
+        <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
           🧠 Smart Food Parser
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Breaking down: "{foodDescription}"
         </p>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6">
         {isParsing && (
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Parsing food items with AI...
+            <span className="text-sm">Parsing food items with AI...</span>
           </div>
         )}
 
         {hasParsed && parsedItems.length > 0 && (
           <>
-            <div className="space-y-4">
-              <h3 className="font-semibold text-foreground">Found Items:</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">Found Items:</h3>
               {parsedItems.map((item, index) => (
-                <div key={index} className="bg-background/50 rounded-lg p-4 border border-border/50">
-                  <div className="flex items-start justify-between gap-4">
+                <div key={index} className="bg-background/50 rounded-lg p-3 sm:p-4 border border-border/50">
+                  <div className="flex flex-col gap-3 sm:gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-medium text-foreground capitalize">{item.name}</h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 sm:mb-3">
+                        <h4 className="font-medium text-foreground capitalize text-sm sm:text-base">{item.name}</h4>
                         {item.hasQuantity && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 w-fit">
                             ✓ Auto-detected
                           </Badge>
                         )}
                       </div>
                       
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground font-medium">
+                      <div className="space-y-2 sm:space-y-3">
+                        <label className="text-xs sm:text-sm text-muted-foreground font-medium">
                           {item.prompt}
                         </label>
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           {selectedUnits[item.name] === 'size' ? (
                             <Select
                               value={itemWeights[item.name] || ''}
                               onValueChange={(value) => handleWeightChange(item.name, value)}
                             >
-                              <SelectTrigger className="w-32">
+                              <SelectTrigger className="w-full sm:w-32 h-10 sm:h-9">
                                 <SelectValue placeholder="Select size" />
                               </SelectTrigger>
                               <SelectContent>
@@ -337,7 +337,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                               value={itemWeights[item.name] || ''}
                               onChange={(e) => handleWeightChange(item.name, e.target.value)}
                               placeholder="Enter amount"
-                              className="w-32"
+                              className="w-full sm:w-32 h-10 sm:h-9 text-center"
                             />
                           )}
                           
@@ -345,7 +345,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                             value={selectedUnits[item.name] || item.unit}
                             onValueChange={(value) => handleUnitChange(item.name, value)}
                           >
-                            <SelectTrigger className="w-28">
+                            <SelectTrigger className="w-full sm:w-28 h-10 sm:h-9">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -360,7 +360,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                       </div>
                       
                       {item.hasQuantity && (
-                        <div className="text-sm text-green-600 flex items-center gap-1">
+                        <div className="text-xs sm:text-sm text-green-600 flex items-center gap-1 mt-2">
                           ✅ Quantity already specified: {item.weight}{item.unit}
                         </div>
                       )}
@@ -370,36 +370,36 @@ export const FoodParser: React.FC<FoodParserProps> = ({
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={calculateAllNutrition}
                 disabled={isCalculating || parsedItems.some(item => !item.hasQuantity && !itemWeights[item.name])}
-                className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+                className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 h-10 sm:h-9"
               >
                 {isCalculating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculating Nutrition...
+                    <span className="text-sm">Calculating...</span>
                   </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add All to Meal
+                    <span className="text-sm">Add All to Meal</span>
                   </>
                 )}
               </Button>
               
-              <Button variant="outline" onClick={onCancel}>
+              <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto h-10 sm:h-9">
                 <X className="mr-2 h-4 w-4" />
-                Cancel
+                <span className="text-sm">Cancel</span>
               </Button>
             </div>
           </>
         )}
 
         {hasParsed && parsedItems.length === 0 && (
-          <div className="text-center text-muted-foreground">
-            No food items found in the description. Please try rephrasing.
+          <div className="text-center text-muted-foreground py-6">
+            <p className="text-sm">No food items found in the description. Please try rephrasing.</p>
           </div>
         )}
       </CardContent>

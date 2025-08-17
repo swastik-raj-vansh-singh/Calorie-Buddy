@@ -588,15 +588,15 @@ const Index = () => {
   // Main Dashboard
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
-      <div className="container mx-auto p-4 max-w-6xl">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2">
-              <User className="h-8 w-8 text-primary" />
-              Hey, {userName}! 👋
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 pt-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2 truncate">
+              <User className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary flex-shrink-0" />
+              <span className="truncate">Hey, {userName}! 👋</span>
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               {user ? 'Your nutrition journey is being tracked!' : 'Tracking in guest mode - Sign in to save progress'}
             </p>
           </div>
@@ -636,23 +636,23 @@ const Index = () => {
         {currentView === 'dashboard' && (
           <>
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
               {/* Goal Type */}
               <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Scale className="h-4 w-4" />
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
+                    <Scale className="h-3 w-3 sm:h-4 sm:w-4" />
                     Fitness Goal
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{goalType === 'bulk' ? '🏋️' : '✂️'}</span>
-                      <span className="text-lg font-bold text-purple-600 dark:text-purple-400 capitalize">{goalType}</span>
+                      <span className="text-xl sm:text-2xl">{goalType === 'bulk' ? '🏋️' : '✂️'}</span>
+                      <span className="text-base sm:text-lg font-bold text-purple-600 dark:text-purple-400 capitalize">{goalType}</span>
                     </div>
                     <Select value={goalType} onValueChange={(value: 'bulk' | 'cut') => setGoalType(value)}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className="h-7 sm:h-8 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -671,34 +671,35 @@ const Index = () => {
                   ? 'from-red-500/10 to-red-500/5 border-red-500/20' 
                   : 'from-primary/10 to-primary/5 border-primary/20'
               }`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Daily Calorie Goal
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
+                    <Target className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Daily Calorie Goal</span>
+                    <span className="sm:hidden">Calories</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-baseline justify-between">
-                      <span className={`text-3xl font-bold ${
+                      <span className={`text-2xl sm:text-3xl font-bold ${
                         (goalType === 'bulk' && caloriesConsumed < calorieGoal) || 
                         (goalType === 'cut' && caloriesConsumed > calorieGoal)
                           ? 'text-red-600' 
                           : 'text-primary'
                       }`}>{caloriesConsumed.toFixed(0)}</span>
-                      <span className="text-lg text-foreground">/ {calorieGoal}</span>
+                      <span className="text-sm sm:text-lg text-foreground">/ {calorieGoal}</span>
                     </div>
                     <Progress 
                       value={(caloriesConsumed / calorieGoal) * 100} 
-                      className="h-3"
+                      className="h-2 sm:h-3"
                     />
-                    <p className={`text-sm ${
+                    <p className={`text-xs sm:text-sm ${
                       (goalType === 'bulk' && caloriesConsumed < calorieGoal) || 
                       (goalType === 'cut' && caloriesConsumed > calorieGoal)
                         ? 'text-red-600 font-semibold' 
                         : 'text-foreground/80'
                     }`}>
-                      {((caloriesConsumed / calorieGoal) * 100).toFixed(1)}% of daily goal
+                      {((caloriesConsumed / calorieGoal) * 100).toFixed(1)}% of goal
                     </p>
                   </div>
                 </CardContent>
@@ -706,24 +707,24 @@ const Index = () => {
 
               {/* Protein Progress */}
               <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                     Protein Goal
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-3xl font-bold text-secondary">{proteinConsumed.toFixed(1)}g</span>
-                      <span className="text-lg text-foreground">/ {proteinGoal}g</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-secondary">{proteinConsumed.toFixed(1)}g</span>
+                      <span className="text-sm sm:text-lg text-foreground">/ {proteinGoal}g</span>
                     </div>
                     <Progress 
                       value={(proteinConsumed / proteinGoal) * 100} 
-                      className="h-3"
+                      className="h-2 sm:h-3"
                     />
-                    <p className="text-sm text-foreground/80">
-                      {((proteinConsumed / proteinGoal) * 100).toFixed(1)}% of daily goal
+                    <p className="text-xs sm:text-sm text-foreground/80">
+                      {((proteinConsumed / proteinGoal) * 100).toFixed(1)}% of goal
                     </p>
                   </div>
                 </CardContent>
@@ -731,25 +732,26 @@ const Index = () => {
 
               {/* Today's Meals */}
               <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <Utensils className="h-4 w-4" />
-                    Today's Meals
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
+                    <Utensils className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Today's Meals</span>
+                    <span className="sm:hidden">Meals</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="pt-0">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-3xl font-bold text-accent">{todayMeals.length}</span>
-                      <span className="text-lg text-foreground">meals</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-accent">{todayMeals.length}</span>
+                      <span className="text-sm sm:text-lg text-foreground">meals</span>
                     </div>
                     <div className="flex gap-1">
                       {Array.from({ length: Math.min(todayMeals.length, 6) }).map((_, index) => (
-                        <div key={index} className="w-3 h-3 bg-accent rounded-full animate-pulse" />
+                        <div key={index} className="w-2 h-2 sm:w-3 sm:h-3 bg-accent rounded-full animate-pulse" />
                       ))}
                     </div>
-                    <p className="text-sm text-foreground/80">
-                      {todayMeals.length === 0 ? 'No meals logged yet' : 
+                    <p className="text-xs sm:text-sm text-foreground/80">
+                      {todayMeals.length === 0 ? 'No meals yet' : 
                        todayMeals.length === 1 ? '1 meal logged' : 
                        `${todayMeals.length} meals logged`}
                     </p>
@@ -759,7 +761,7 @@ const Index = () => {
             </div>
 
             {/* Quick Actions & Recent Meals */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20 md:pb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 pb-20 md:pb-6">
               {/* Quick Add Meal */}
               <Card className="bg-card/50 backdrop-blur-sm border-border/50 shadow-lg">
                 <CardHeader>
