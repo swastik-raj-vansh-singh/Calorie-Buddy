@@ -900,6 +900,7 @@ const Index = () => {
             proteinGoal={proteinGoal}
             meals={todayMeals}
             historicalData={historicalData}
+            isAuthenticated={!!user}
           />
         )}
 
