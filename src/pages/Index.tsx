@@ -479,9 +479,36 @@ const Index = () => {
   };
 
   const handleImageFoodDetected = (foodDescription: string) => {
-    setSearchTerm(foodDescription);
-    setShowImageRecognition(false);
-    handleFoodSearch();
+    const term = foodDescription.trim();
+    if (!term) {
+      setShowImageRecognition(false);
+      return;
+    }
+
+    setSearchTerm(term);
+    setIsAddingMeal(true);
+    setIsSearching(true);
+
+    (async () => {
+      try {
+        const result = await enhancedOpenaiService.parseAndEstimateNutrition(term);
+        setSearchResults(result);
+        toast({
+          title: "Food analyzed successfully!",
+          description: `Found ${result.items.length} item(s) with ${result.total_calories} total calories`,
+        });
+      } catch (error) {
+        console.error('Error analyzing image-detected food:', error);
+        toast({
+          title: "Analysis failed",
+          description: "Please try again or use manual entry",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSearching(false);
+        setShowImageRecognition(false);
+      }
+    })();
   };
 
   const handleWelcomeNext = () => {
