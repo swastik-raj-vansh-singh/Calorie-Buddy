@@ -192,22 +192,15 @@ export const ImageFoodRecognition: React.FC<ImageFoodRecognitionProps> = ({
       <CardContent className="space-y-4 sm:space-y-6 px-3 sm:px-6">
         {!isCameraOpen && !capturedImage && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <Button
-              onClick={startCamera}
-              className="h-24 sm:h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-dashed border-primary/30 hover:border-primary/50 hover:bg-primary/20 text-xs sm:text-sm"
-              variant="outline"
-            >
-              <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              <span className="font-medium">Take Photo</span>
-            </Button>
+            {/* Removed redundant Take Photo button */}
             
             <Button
               onClick={() => fileInputRef.current?.click()}
               className="h-24 sm:h-32 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-secondary/20 to-secondary/10 border-2 border-dashed border-secondary/30 hover:border-secondary/50 hover:bg-secondary/20 text-xs sm:text-sm"
               variant="outline"
             >
-              <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-secondary" />
-              <span className="font-medium">Upload Image</span>
+              <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-secondary" />
+              <span className="font-medium">Camera</span>
             </Button>
           </div>
         )}
