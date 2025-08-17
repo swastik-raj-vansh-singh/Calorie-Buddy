@@ -179,20 +179,20 @@ export const VisualizeSection: React.FC<VisualizeSectionProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-6">
-            <ChartContainer config={chartConfig} className="h-[280px] md:h-[320px]">
+            <ChartContainer config={chartConfig} className="h-[280px] md:h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={progressData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+                <BarChart data={progressData} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
                   <XAxis 
                     dataKey="name" 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 500 }}
+                    tick={{ fill: 'hsl(var(--foreground))', fontSize: 11, fontWeight: 500 }}
                   />
                   <YAxis 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: 'hsl(var(--foreground))', fontSize: 10 }}
-                    width={40}
+                    tick={{ fill: 'hsl(var(--foreground))', fontSize: 9 }}
+                    width={30}
                   />
                   <ChartTooltip 
                     content={({ active, payload, label }) => {
@@ -248,16 +248,16 @@ export const VisualizeSection: React.FC<VisualizeSectionProps> = ({
           <CardContent className="px-3 md:px-6">
             {mealBreakdown.length > 0 ? (
               <>
-                <ChartContainer config={chartConfig} className="h-[240px] md:h-[280px]">
+                <ChartContainer config={chartConfig} className="h-[240px] md:h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={mealBreakdown}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={90}
-                        paddingAngle={8}
+                        innerRadius={30}
+                        outerRadius={70}
+                        paddingAngle={6}
                         dataKey="calories"
                       >
                         {mealBreakdown.map((entry, index) => (
@@ -353,22 +353,22 @@ export const VisualizeSection: React.FC<VisualizeSectionProps> = ({
               </div>
             </CardHeader>
             <CardContent className="px-3 md:px-6">
-              <ChartContainer config={chartConfig} className="h-[300px] md:h-[350px]">
+              <ChartContainer config={chartConfig} className="h-[300px] md:h-[350px] w-full overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   {activeChart === 'line' ? (
-                    <LineChart data={getFilteredData()} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+                    <LineChart data={getFilteredData()} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
                       <XAxis 
                         dataKey="date" 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
+                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 10 }}
                         interval="preserveStartEnd"
                       />
                       <YAxis 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 10 }}
-                        width={40}
+                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 9 }}
+                        width={25}
                       />
                       <ChartTooltip 
                         content={({ active, payload, label }) => {
@@ -411,19 +411,19 @@ export const VisualizeSection: React.FC<VisualizeSectionProps> = ({
                       />
                     </LineChart>
                   ) : (
-                    <AreaChart data={getFilteredData()} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+                    <AreaChart data={getFilteredData()} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
                       <XAxis 
                         dataKey="date" 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
+                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 10 }}
                         interval="preserveStartEnd"
                       />
                       <YAxis 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 10 }}
-                        width={40}
+                        tick={{ fill: 'hsl(var(--foreground))', fontSize: 9 }}
+                        width={25}
                       />
                       <ChartTooltip 
                         content={({ active, payload, label }) => {
