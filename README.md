@@ -1,5 +1,5 @@
 # NutriVision - Smart Food Recognition & Nutrition Tracker
-
+ 
 A modern web application that combines computer vision and nutrition science to help users track their dietary intake through intelligent food recognition and comprehensive nutritional analysis.
 
 ## 🚀 Features
