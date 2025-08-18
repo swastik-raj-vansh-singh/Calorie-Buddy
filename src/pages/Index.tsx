@@ -78,9 +78,29 @@ const Index = () => {
   const [editUnit, setEditUnit] = useState<string>('');
   const [editSize, setEditSize] = useState<string>('');
   
+  // String inputs to allow clearing and proper number formatting
+  const [calorieGoalInput, setCalorieGoalInput] = useState('2000');
+  const [proteinGoalInput, setProteinGoalInput] = useState('150');
+  const [editQuantityInput, setEditQuantityInput] = useState('1');
+  const [editingMealQuantityInput, setEditingMealQuantityInput] = useState('1');
+  
   // Services
   const dataService = new SupabaseDataService();
   const enhancedOpenaiService = new EnhancedOpenAIService(import.meta.env.VITE_OPENAI_API_KEY);
+
+  // Sync item editor string input when opening editor
+  useEffect(() => {
+    if (showItemEditor) {
+      setEditQuantityInput(String(editQuantity || 1));
+    }
+  }, [showItemEditor, editQuantity]);
+
+  // Sync meal editor string input when opening editor
+  useEffect(() => {
+    if (showMealEditor && editingMeal) {
+      setEditingMealQuantityInput(String(editingMeal.quantity || 1));
+    }
+  }, [showMealEditor, editingMeal]);
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -107,6 +127,8 @@ const Index = () => {
         setUserName(data.userName || '');
         setCalorieGoal(data.calorieGoal || 2000);
         setProteinGoal(data.proteinGoal || 150);
+        setCalorieGoalInput(String(data.calorieGoal || 2000));
+        setProteinGoalInput(String(data.proteinGoal || 150));
         setCaloriesConsumed(data.caloriesConsumed || 0);
         setProteinConsumed(data.proteinConsumed || 0);
         setGoalType(data.goalType || 'bulk');
@@ -125,6 +147,8 @@ const Index = () => {
       if (goals) {
         setCalorieGoal(goals.calorie_goal);
         setProteinGoal(goals.protein_goal);
+        setCalorieGoalInput(String(goals.calorie_goal));
+        setProteinGoalInput(String(goals.protein_goal));
       }
       
       // Load today's meals
@@ -520,10 +544,21 @@ const Index = () => {
   };
 
   const handleOnboardingComplete = async () => {
+    // Ensure we parse any un-blurred inputs
+    const parsedCal = parseInt((calorieGoalInput || '').trim(), 10);
+    const parsedProt = parseInt((proteinGoalInput || '').trim(), 10);
+    const finalCal = Number.isFinite(parsedCal) && parsedCal > 0 ? parsedCal : calorieGoal;
+    const finalProt = Number.isFinite(parsedProt) && parsedProt > 0 ? parsedProt : proteinGoal;
+
+    setCalorieGoal(finalCal);
+    setProteinGoal(finalProt);
+    setCalorieGoalInput(String(finalCal));
+    setProteinGoalInput(String(finalProt));
+
     // Save goals to database if user is authenticated
     if (user) {
       try {
-        await dataService.updateUserGoals(calorieGoal, proteinGoal);
+        await dataService.updateUserGoals(finalCal, finalProt);
       } catch (error) {
         console.error('Error saving goals:', error);
       }
@@ -669,8 +704,16 @@ const Index = () => {
                 </label>
                 <Input
                   type="number"
-                  value={calorieGoal}
-                  onChange={(e) => setCalorieGoal(Number(e.target.value))}
+                  value={calorieGoalInput}
+                  onChange={(e) => setCalorieGoalInput(e.target.value)}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    const n = parseInt(v, 10);
+                    if (Number.isFinite(n) && n > 0) {
+                      setCalorieGoal(n);
+                      setCalorieGoalInput(String(n));
+                    }
+                  }}
                   className="text-center bg-background/50 border-primary/20"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Recommended: 1500-2500 calories</p>
@@ -682,8 +725,16 @@ const Index = () => {
                 </label>
                 <Input
                   type="number"
-                  value={proteinGoal}
-                  onChange={(e) => setProteinGoal(Number(e.target.value))}
+                  value={proteinGoalInput}
+                  onChange={(e) => setProteinGoalInput(e.target.value)}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    const n = parseInt(v, 10);
+                    if (Number.isFinite(n) && n > 0) {
+                      setProteinGoal(n);
+                      setProteinGoalInput(String(n));
+                    }
+                  }}
                   className="text-center bg-background/50 border-primary/20"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Recommended: 0.8-2g per kg body weight</p>
@@ -1292,7 +1343,11 @@ const Index = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">Quantity</label>
                     <div className="flex items-center gap-2">
                       <Button
-                        onClick={() => setEditQuantity((q) => Math.max(0.1, parseFloat((q - 0.1).toFixed(1))))}
+                        onClick={() => setEditQuantity((q) => {
+                          const newQ = Math.max(0.1, parseFloat((q - 0.1).toFixed(1)));
+                          setEditQuantityInput(newQ.toFixed(1));
+                          return newQ;
+                        })}
                         size="sm"
                         variant="outline"
                       >
@@ -1302,12 +1357,24 @@ const Index = () => {
                         type="number"
                         step="0.1"
                         min="0.1"
-                        value={editQuantity}
-                        onChange={(e) => setEditQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))}
+                        value={editQuantityInput}
+                        onChange={(e) => setEditQuantityInput(e.target.value)}
+                        onBlur={(e) => {
+                          const v = parseFloat(e.target.value);
+                          if (!isNaN(v) && v > 0) {
+                            const q = Math.max(0.1, Math.round(v * 10) / 10);
+                            setEditQuantity(q);
+                            setEditQuantityInput(q.toFixed(1));
+                          }
+                        }}
                         className="text-center"
                       />
                       <Button
-                        onClick={() => setEditQuantity((q) => parseFloat((q + 0.1).toFixed(1)))}
+                        onClick={() => setEditQuantity((q) => {
+                          const newQ = parseFloat((q + 0.1).toFixed(1));
+                          setEditQuantityInput(newQ.toFixed(1));
+                          return newQ;
+                        })}
                         size="sm"
                         variant="outline"
                       >
@@ -1394,6 +1461,7 @@ const Index = () => {
                           className="text-xs"
                           onClick={() => {
                             setEditQuantity(s.qty);
+                            setEditQuantityInput(String(s.qty));
                             if (s.unit) setEditUnit(s.unit);
                             if (s.size) setEditSize(s.size);
                           }}
@@ -1446,10 +1514,16 @@ const Index = () => {
                       const sizeMultiplier = /pizza|burger|sandwich/i.test(editingSearchItem.name) || editUnit === 'size'
                         ? (sizeMultiplierMap[newSize] || 1) / (sizeMultiplierMap[originalSize] || 1)
                         : 1;
-                      const ratio = (editQuantity / originalQty) * sizeMultiplier;
+                      // Parse from string state in case the input hasn't blurred yet
+                      const parsed = parseFloat(editQuantityInput);
+                      const finalQty = (!isNaN(parsed) && parsed > 0) ? Math.max(0.1, Math.round(parsed * 10) / 10) : editQuantity;
+                      // sync state
+                      setEditQuantity(finalQty);
+                      setEditQuantityInput(finalQty.toFixed(1));
+                      const ratio = (finalQty / originalQty) * sizeMultiplier;
                       const updatedItem = {
                         ...editingSearchItem,
-                        quantity: editQuantity,
+                        quantity: finalQty,
                         unit: editUnit,
                         size: editSize || editingSearchItem.size,
                         estimated_calories: Math.max(1, Math.round((editingSearchItem.estimated_calories || 0) * ratio)),
@@ -1531,6 +1605,7 @@ const Index = () => {
                     <Button
                       onClick={() => {
                         const newQuantity = Math.max(0.1, (editingMeal.quantity || 1) - 0.1);
+                        setEditingMealQuantityInput(newQuantity.toFixed(1));
                         const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
                         setEditingMeal({
                           ...editingMeal,
@@ -1551,28 +1626,33 @@ const Index = () => {
                       type="number"
                       step="0.1"
                       min="0.1"
-                      value={editingMeal.quantity || 1}
-                      onChange={(e) => {
-                        const newQuantity = parseFloat(e.target.value) || 1;
-                        const originalQuantity = editingMeal.originalQuantity || editingMeal.quantity || 1;
-                        const originalCalories = editingMeal.calories / (editingMeal.quantity || 1) * originalQuantity;
-                        const originalProtein = editingMeal.protein / (editingMeal.quantity || 1) * originalQuantity;
-                        
-                        setEditingMeal({
-                          ...editingMeal,
-                          quantity: newQuantity,
-                          calories: Math.round((originalCalories / originalQuantity) * newQuantity),
-                          protein: Math.round((originalProtein / originalQuantity) * newQuantity),
-                          carbs: editingMeal.carbs ? Math.round((editingMeal.carbs / (editingMeal.quantity || 1)) * newQuantity) : undefined,
-                          fat: editingMeal.fat ? Math.round((editingMeal.fat / (editingMeal.quantity || 1)) * newQuantity) : undefined,
-                          fiber: editingMeal.fiber ? Math.round((editingMeal.fiber / (editingMeal.quantity || 1)) * newQuantity) : undefined,
-                        });
+                      value={editingMealQuantityInput}
+                      onChange={(e) => setEditingMealQuantityInput(e.target.value)}
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val > 0) {
+                          const newQuantity = Math.max(0.1, Math.round(val * 10) / 10);
+                          const originalQuantity = editingMeal.originalQuantity || editingMeal.quantity || 1;
+                          const originalCalories = (editingMeal.calories / (editingMeal.quantity || 1)) * originalQuantity;
+                          const originalProtein = (editingMeal.protein / (editingMeal.quantity || 1)) * originalQuantity;
+                          setEditingMeal({
+                            ...editingMeal,
+                            quantity: newQuantity,
+                            calories: Math.round((originalCalories / originalQuantity) * newQuantity),
+                            protein: Math.round((originalProtein / originalQuantity) * newQuantity),
+                            carbs: editingMeal.carbs ? Math.round((editingMeal.carbs / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                            fat: editingMeal.fat ? Math.round((editingMeal.fat / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                            fiber: editingMeal.fiber ? Math.round((editingMeal.fiber / (editingMeal.quantity || 1)) * newQuantity) : undefined,
+                          });
+                          setEditingMealQuantityInput(newQuantity.toFixed(1));
+                        }
                       }}
                       className="text-center"
                     />
                     <Button
                       onClick={() => {
                         const newQuantity = (editingMeal.quantity || 1) + 0.1;
+                        setEditingMealQuantityInput(newQuantity.toFixed(1));
                         const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
                         setEditingMeal({
                           ...editingMeal,
@@ -1604,7 +1684,31 @@ const Index = () => {
 
                 <div className="flex gap-2 pt-2">
                   <Button
-                    onClick={() => handleSaveEditedMeal(editingMeal)}
+                    onClick={() => {
+                      // Ensure we use the latest typed value from string input
+                      const val = parseFloat(editingMealQuantityInput);
+                      if (!isNaN(val) && val > 0 && editingMeal) {
+                        const newQuantity = Math.max(0.1, Math.round(val * 10) / 10);
+                        const perCal = editingMeal.calories / (editingMeal.quantity || 1);
+                        const perProt = editingMeal.protein / (editingMeal.quantity || 1);
+                        const perCarbs = editingMeal.carbs ? editingMeal.carbs / (editingMeal.quantity || 1) : undefined;
+                        const perFat = editingMeal.fat ? editingMeal.fat / (editingMeal.quantity || 1) : undefined;
+                        const perFiber = editingMeal.fiber ? editingMeal.fiber / (editingMeal.quantity || 1) : undefined;
+                        const updated = {
+                          ...editingMeal,
+                          quantity: newQuantity,
+                          calories: Math.round(perCal * newQuantity),
+                          protein: Math.round(perProt * newQuantity),
+                          carbs: perCarbs ? Math.round(perCarbs * newQuantity) : undefined,
+                          fat: perFat ? Math.round(perFat * newQuantity) : undefined,
+                          fiber: perFiber ? Math.round(perFiber * newQuantity) : undefined,
+                        };
+                        setEditingMealQuantityInput(newQuantity.toFixed(1));
+                        handleSaveEditedMeal(updated);
+                      } else if (editingMeal) {
+                        handleSaveEditedMeal(editingMeal);
+                      }
+                    }}
                     className="flex-1"
                   >
                     Save Changes
