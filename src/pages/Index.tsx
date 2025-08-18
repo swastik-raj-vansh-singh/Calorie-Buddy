@@ -1344,7 +1344,7 @@ const Index = () => {
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => setEditQuantity((q) => {
-                          const newQ = Math.max(0.1, parseFloat((q - 0.1).toFixed(1)));
+                          const newQ = Math.max(0.1, parseFloat((q - 1).toFixed(1)));
                           setEditQuantityInput(newQ.toFixed(1));
                           return newQ;
                         })}
@@ -1355,7 +1355,7 @@ const Index = () => {
                       </Button>
                       <Input
                         type="number"
-                        step="0.1"
+                        step="1"
                         min="0.1"
                         value={editQuantityInput}
                         onChange={(e) => setEditQuantityInput(e.target.value)}
@@ -1371,7 +1371,7 @@ const Index = () => {
                       />
                       <Button
                         onClick={() => setEditQuantity((q) => {
-                          const newQ = parseFloat((q + 0.1).toFixed(1));
+                          const newQ = parseFloat((q + 1).toFixed(1));
                           setEditQuantityInput(newQ.toFixed(1));
                           return newQ;
                         })}
@@ -1604,7 +1604,7 @@ const Index = () => {
                   <div className="flex items-center gap-2">
                     <Button
                       onClick={() => {
-                        const newQuantity = Math.max(0.1, (editingMeal.quantity || 1) - 0.1);
+                        const newQuantity = Math.max(0.1, (editingMeal.quantity || 1) - 1);
                         setEditingMealQuantityInput(newQuantity.toFixed(1));
                         const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
                         setEditingMeal({
@@ -1624,7 +1624,7 @@ const Index = () => {
                     </Button>
                     <Input
                       type="number"
-                      step="0.1"
+                      step="1"
                       min="0.1"
                       value={editingMealQuantityInput}
                       onChange={(e) => setEditingMealQuantityInput(e.target.value)}
@@ -1651,7 +1651,7 @@ const Index = () => {
                     />
                     <Button
                       onClick={() => {
-                        const newQuantity = (editingMeal.quantity || 1) + 0.1;
+                        const newQuantity = (editingMeal.quantity || 1) + 1;
                         setEditingMealQuantityInput(newQuantity.toFixed(1));
                         const multiplier = newQuantity / (editingMeal.originalQuantity || editingMeal.quantity || 1);
                         setEditingMeal({
