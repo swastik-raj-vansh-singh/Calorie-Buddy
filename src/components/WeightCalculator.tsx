@@ -217,8 +217,9 @@ export const WeightCalculator: React.FC<WeightCalculatorProps> = ({
               id="weight"
               type="number"
               value={weight}
-              onChange={(e) => setWeight(Number(e.target.value) || 0)}
-              min="1"
+              onChange={(e) => setWeight(e.target.value)}
+              step="0.1"
+              min="0.1"
               max={2000}
               className="flex-1 text-center text-lg font-semibold"
               placeholder="Enter amount"

@@ -519,6 +519,7 @@ export const FoodParser: React.FC<FoodParserProps> = ({
                                 handleWeightChange(item.name, e.target.value)
                               }
                               placeholder="Enter amount"
+                              step="0.1"
                               className="w-full sm:w-32 h-10 sm:h-9 text-center"
                             />
                           )}
