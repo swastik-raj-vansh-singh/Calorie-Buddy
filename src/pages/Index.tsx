@@ -83,6 +83,10 @@ const Index = () => {
   const [proteinGoalInput, setProteinGoalInput] = useState('150');
   const [editQuantityInput, setEditQuantityInput] = useState('1');
   const [editingMealQuantityInput, setEditingMealQuantityInput] = useState('1');
+  const [caloriesConsumedInput, setCaloriesConsumedInput] = useState('0');
+  const [proteinConsumedInput, setProteinConsumedInput] = useState('0');
+  const [isEditingCaloriesConsumed, setIsEditingCaloriesConsumed] = useState(false);
+  const [isEditingProteinConsumed, setIsEditingProteinConsumed] = useState(false);
   
   // Services
   const dataService = new SupabaseDataService();
@@ -149,6 +153,10 @@ const Index = () => {
         setProteinGoal(goals.protein_goal);
         setCalorieGoalInput(String(goals.calorie_goal));
         setProteinGoalInput(String(goals.protein_goal));
+      } else {
+        // No goals found in database - preserve current values from guest mode
+        // Don't reset to defaults (2000/150) - keep what user has already set
+        await dataService.updateUserGoals(calorieGoal, proteinGoal);
       }
       
       // Load today's meals
@@ -198,6 +206,15 @@ const Index = () => {
       });
     }
   };
+
+  // Keep editable inputs in sync with current totals
+  useEffect(() => {
+    setCaloriesConsumedInput(String(Math.max(0, Math.round(caloriesConsumed))));
+  }, [caloriesConsumed]);
+
+  useEffect(() => {
+    setProteinConsumedInput(String(Math.max(0, Number(proteinConsumed.toFixed(1)))));
+  }, [proteinConsumed]);
 
   // Save data to localStorage for non-authenticated users only
   useEffect(() => {
@@ -543,6 +560,115 @@ const Index = () => {
     }
   };
 
+  // Handle saving manual edits to consumed calories
+  const handleSaveCaloriesConsumed = () => {
+    const parsed = parseFloat(caloriesConsumedInput);
+    const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
+    setCaloriesConsumed(newValue);
+    setIsEditingCaloriesConsumed(false);
+    
+    // Add adjustment meal to track this change for authenticated users
+    if (user && newValue !== caloriesConsumed) {
+      const difference = newValue - caloriesConsumed;
+      handleAddAdjustmentMeal(`Daily Calorie Adjustment (${difference > 0 ? '+' : ''}${difference.toFixed(0)} cal)`, difference, 0, 'adjustment');
+    }
+
+    toast({
+      title: "Calories updated",
+      description: `Daily calories set to ${newValue.toFixed(0)}`,
+    });
+  };
+
+  // Handle saving manual edits to consumed protein
+  const handleSaveProteinConsumed = () => {
+    const parsed = parseFloat(proteinConsumedInput);
+    const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
+    setProteinConsumed(newValue);
+    setIsEditingProteinConsumed(false);
+    
+    // Add adjustment meal to track this change for authenticated users
+    if (user && newValue !== proteinConsumed) {
+      const difference = newValue - proteinConsumed;
+      handleAddAdjustmentMeal(`Daily Protein Adjustment (${difference > 0 ? '+' : ''}${difference.toFixed(1)}g protein)`, 0, difference, 'adjustment');
+    }
+
+    toast({
+      title: "Protein updated",
+      description: `Daily protein set to ${newValue.toFixed(1)}g`,
+    });
+  };
+
+  // Helper to add adjustment meals for tracking manual edits
+  const handleAddAdjustmentMeal = async (name: string, calories: number, protein: number, type: string) => {
+    if (user) {
+      try {
+        const saved = await dataService.addMeal({
+          name,
+          calories,
+          protein,
+          meal_type: type,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
+        });
+
+        // Update local list and totals to keep UI consistent
+        const converted: Meal = {
+          id: parseInt(saved.id.slice(-8), 16),
+          name: saved.name,
+          calories: saved.calories,
+          protein: saved.protein,
+          type: saved.meal_type,
+          carbs: saved.carbs,
+          fat: saved.fat,
+          fiber: saved.fiber,
+          aiEnhanced: true,
+        };
+        const updatedMeals = [converted, ...todayMeals];
+        setTodayMeals(updatedMeals);
+        const newCaloriesConsumed = updatedMeals.reduce((sum, m) => sum + m.calories, 0);
+        const newProteinConsumed = updatedMeals.reduce((sum, m) => sum + m.protein, 0);
+        setCaloriesConsumed(newCaloriesConsumed);
+        setProteinConsumed(newProteinConsumed);
+      } catch (error) {
+        console.error('Error saving adjustment meal:', error);
+      }
+    }
+  };
+
+  // Handle deleting a meal
+  const handleDeleteMeal = async (meal: Meal, index: number) => {
+    // Remove from database if user is authenticated
+    if (user) {
+      try {
+        await dataService.deleteMeal(meal.id.toString());
+      } catch (error) {
+        console.error('Error deleting meal:', error);
+        toast({
+          title: "Error deleting meal",
+          description: "There was an issue deleting your meal. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Update local state
+    const updatedMeals = todayMeals.filter((_, i) => i !== index);
+    setTodayMeals(updatedMeals);
+
+    // Recalculate totals
+    const newCaloriesConsumed = updatedMeals.reduce((sum, meal) => sum + meal.calories, 0);
+    const newProteinConsumed = updatedMeals.reduce((sum, meal) => sum + meal.protein, 0);
+    setCaloriesConsumed(newCaloriesConsumed);
+    setProteinConsumed(newProteinConsumed);
+
+    toast({
+      title: "Meal deleted",
+      description: `Removed ${meal.name} (${meal.calories} cal, ${meal.protein}g protein)`,
+    });
+  };
+
   const handleOnboardingComplete = async () => {
     // Ensure we parse any un-blurred inputs
     const parsedCal = parseInt((calorieGoalInput || '').trim(), 10);
@@ -774,7 +900,7 @@ const Index = () => {
 
   // Main Dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30 pb-20 sm:pb-0">
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-6xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 pt-4">
@@ -863,6 +989,9 @@ const Index = () => {
                     <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">Daily Calorie Goal</span>
                     <span className="sm:hidden">Calories</span>
+                    <Button size="sm" variant="outline" className="ml-auto" onClick={() => setIsEditingCaloriesConsumed(prev => !prev)}>
+                      {isEditingCaloriesConsumed ? 'Done' : 'Edit'}
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -873,7 +1002,24 @@ const Index = () => {
                         (goalType === 'cut' && caloriesConsumed > calorieGoal)
                           ? 'text-red-600' 
                           : 'text-primary'
-                      }`}>{caloriesConsumed.toFixed(0)}</span>
+                      }`}>{!isEditingCaloriesConsumed ? (
+                        caloriesConsumed.toFixed(0)
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            step="1"
+                            min="0"
+                            value={caloriesConsumedInput}
+                            onChange={(e) => setCaloriesConsumedInput(e.target.value)}
+                            className="w-24 h-8 text-base"
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCaloriesConsumed(); }}
+                          />
+                          <Button size="sm" onClick={handleSaveCaloriesConsumed}>Save</Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setIsEditingCaloriesConsumed(false); setCaloriesConsumedInput(String(Math.round(caloriesConsumed))); }}>Cancel</Button>
+                        </div>
+                      )}</span>
                       <span className="text-sm sm:text-lg text-foreground">/ {calorieGoal}</span>
                     </div>
                     <Progress 
@@ -898,12 +1044,32 @@ const Index = () => {
                   <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
                     <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                     Protein Goal
+                    <Button size="sm" variant="outline" className="ml-auto" onClick={() => setIsEditingProteinConsumed(prev => !prev)}>
+                      {isEditingProteinConsumed ? 'Done' : 'Edit'}
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-2xl sm:text-3xl font-bold text-secondary">{proteinConsumed.toFixed(1)}g</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-secondary">{!isEditingProteinConsumed ? (
+                        `${proteinConsumed.toFixed(1)}g`
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.1"
+                            min="0"
+                            value={proteinConsumedInput}
+                            onChange={(e) => setProteinConsumedInput(e.target.value)}
+                            className="w-24 h-8 text-base"
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveProteinConsumed(); }}
+                          />
+                          <Button size="sm" onClick={handleSaveProteinConsumed}>Save</Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setIsEditingProteinConsumed(false); setProteinConsumedInput(String(Number(proteinConsumed.toFixed(1)))); }}>Cancel</Button>
+                        </div>
+                      )}</span>
                       <span className="text-sm sm:text-lg text-foreground">/ {proteinGoal}g</span>
                     </div>
                     <Progress 
@@ -1065,7 +1231,7 @@ const Index = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="text-right">
+                            <div className="text-right mr-2">
                               <p className="text-sm font-medium text-foreground">{meal.calories} cal</p>
                               <p className="text-xs text-foreground/60">{meal.protein}g protein</p>
                               {meal.weight && (
@@ -1075,6 +1241,9 @@ const Index = () => {
                                 <Badge variant="outline" className="text-xs mt-1">Edited</Badge>
                               )}
                             </div>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteMeal(meal, index)} aria-label="Remove meal">
+                              −
+                            </Button>
                           </div>
                         </div>
                       ))
