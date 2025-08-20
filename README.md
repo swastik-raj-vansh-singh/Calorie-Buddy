@@ -383,7 +383,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **React Team** for the amazing React framework
 - **Vercel** for the incredible Vite build tool
 - **Tailwind Labs** for the utility-first CSS framework
-- **shadcn** for the beautiful UI component library
+
 - **Supabase** for the backend-as-a-service platform
 - **Google** for the Gemini AI API
 
@@ -394,7 +394,7 @@ CalorieBuddy was inspired by the need for a more intelligent, user-friendly appr
 
 <div align="center">
 
-**Made with ❤️ for a healthier world**
+**Made for a healthier world**
 
 [🌟 Star this project](https://github.com/yourusername/calorie-buddy) • [🐛 Report Bug](https://github.com/yourusername/calorie-buddy/issues) • [✨ Request Feature](https://github.com/yourusername/calorie-buddy/issues)
 
