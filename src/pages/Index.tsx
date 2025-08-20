@@ -562,41 +562,47 @@ const Index = () => {
 
   // Handle saving manual edits to consumed calories
   const handleSaveCaloriesConsumed = () => {
-    const parsed = parseFloat(caloriesConsumedInput);
-    const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
-    setCaloriesConsumed(newValue);
-    setIsEditingCaloriesConsumed(false);
-    
-    // Add adjustment meal to track this change for authenticated users
-    if (user && newValue !== caloriesConsumed) {
-      const difference = newValue - caloriesConsumed;
-      handleAddAdjustmentMeal(`Daily Calorie Adjustment (${difference > 0 ? '+' : ''}${difference.toFixed(0)} cal)`, difference, 0, 'adjustment');
-    }
+  const parsed = parseFloat(caloriesConsumedInput);
+  const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
+  setCalorieGoal(newValue);
+  setIsEditingCaloriesConsumed(false);
 
-    toast({
-      title: "Calories updated",
-      description: `Daily calories set to ${newValue.toFixed(0)}`,
-    });
-  };
+  // Save goals to database if user is authenticated
+  if (user && newValue !== calorieGoal) {
+    try {
+      dataService.updateUserGoals(newValue, proteinGoal);
+    } catch (error) {
+      console.error('Error saving calorie goal:', error);
+    }
+  }
+
+  toast({
+    title: "Calorie goal updated",
+    description: `Target calorie goal set to ${newValue.toFixed(0)}`,
+  });
+}
 
   // Handle saving manual edits to consumed protein
   const handleSaveProteinConsumed = () => {
-    const parsed = parseFloat(proteinConsumedInput);
-    const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
-    setProteinConsumed(newValue);
-    setIsEditingProteinConsumed(false);
-    
-    // Add adjustment meal to track this change for authenticated users
-    if (user && newValue !== proteinConsumed) {
-      const difference = newValue - proteinConsumed;
-      handleAddAdjustmentMeal(`Daily Protein Adjustment (${difference > 0 ? '+' : ''}${difference.toFixed(1)}g protein)`, 0, difference, 'adjustment');
-    }
+  const parsed = parseFloat(proteinConsumedInput);
+  const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
+  setProteinGoal(newValue);
+  setIsEditingProteinConsumed(false);
 
-    toast({
-      title: "Protein updated",
-      description: `Daily protein set to ${newValue.toFixed(1)}g`,
-    });
-  };
+  // Save goals to database if user is authenticated
+  if (user && newValue !== proteinGoal) {
+    try {
+      dataService.updateUserGoals(calorieGoal, newValue);
+    } catch (error) {
+      console.error('Error saving protein goal:', error);
+    }
+  }
+
+  toast({
+    title: "Protein goal updated",
+    description: `Target protein goal set to ${newValue.toFixed(1)}g`,
+  });
+}
 
   // Helper to add adjustment meals for tracking manual edits
   const handleAddAdjustmentMeal = async (name: string, calories: number, protein: number, type: string) => {
@@ -741,7 +747,7 @@ const Index = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-background to-secondary/20 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">Loading...</p>
@@ -753,7 +759,7 @@ const Index = () => {
   // Welcome Screen (for non-authenticated users)
   if (isWelcome && !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center animate-fade-in bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
           <CardHeader className="space-y-4">
             <div className="text-6xl animate-bounce">🍎</div>
@@ -811,7 +817,7 @@ const Index = () => {
   // Onboarding Screen
   if (isOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-primary/20 via-background to-secondary/20 flex items-center justify-center p-4">
         <Card className="w-full max-w-md animate-fade-in bg-card/80 backdrop-blur-sm border-primary/20 shadow-2xl">
           <CardHeader className="text-center">
             <div className="text-4xl mb-4">🎯</div>
@@ -900,10 +906,10 @@ const Index = () => {
 
   // Main Dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/30 pb-20 sm:pb-0">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-background via-background/95 to-muted/30 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-6xl">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 pt-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 pt-5">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2 truncate">
               <User className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-primary flex-shrink-0" />
@@ -949,7 +955,7 @@ const Index = () => {
         {currentView === 'dashboard' && (
           <>
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 mb-6 sm:mb-8">
               {/* Goal Type */}
               <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20 shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardHeader className="pb-2 sm:pb-3">
@@ -1114,7 +1120,7 @@ const Index = () => {
             </div>
 
             {/* Quick Actions & Recent Meals */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 pb-20 md:pb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Quick Add Meal */}
               <Card className="bg-card/50 backdrop-blur-sm border-border/50 shadow-lg">
                 <CardHeader>
@@ -1198,7 +1204,7 @@ const Index = () => {
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                  <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-stable overscroll-contain">
                     {todayMeals.length === 0 ? (
                       <div className="text-center py-8 text-foreground/60">
                         <Utensils className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -1277,7 +1283,7 @@ const Index = () => {
 
         {/* AI-Powered Food Search Modal */}
         <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-card border-border">
+          <DialogContent className="max-w-2xl max-h-[80dvh] overflow-y-auto bg-card border-border scrollbar-stable">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
                 <Brain className="h-5 w-5 text-primary" />
@@ -1297,9 +1303,9 @@ const Index = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleFoodSearch()}
-                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground pr-32"
+                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground h-12 pr-36 sm:pr-40"
                 />
-                <div className="absolute right-1 top-1 flex gap-1">
+                <div className="absolute right-1.5 top-1.5 flex gap-1">
                   <Button 
                     onClick={() => {
                       setShowImageRecognition(true);
@@ -1307,7 +1313,7 @@ const Index = () => {
                     }}
                     size="sm"
                     variant="outline"
-                    className="h-8 border-primary/20 hover:bg-primary/10"
+                    className="h-9 w-9 p-0 border-primary/20 hover:bg-primary/10"
                     title="Take a photo to detect food"
                   >
                     <Camera className="h-4 w-4" />
@@ -1315,7 +1321,7 @@ const Index = () => {
                   <Button 
                     onClick={handleFoodSearch}
                     size="sm"
-                    className="h-8"
+                    className="h-9 px-3"
                     disabled={!searchTerm.trim() || isSearching}
                   >
                     {isSearching ? (

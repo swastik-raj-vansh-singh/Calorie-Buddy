@@ -2,32 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+All colors MUST be HSL. */
 
+/* Theme variables */
 @layer base {
-:root {
-  --background: 224 71% 4%;
-  --foreground: 210 40% 98%;
-  --muted: 223 47% 11%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --popover: 224 71% 4%;
-  --popover-foreground: 210 40% 98%;
-  --border: 216 34% 17%;
-  --input: 216 34% 17%;
-  --card: 224 71% 4%;
-  --card-foreground: 210 40% 98%;
-  --primary: 142 86% 28%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217 91% 60%;
-  --secondary-foreground: 222.2 47.4% 1.2%;
-  --accent: 142 76% 36%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 210 40% 98%;
-  --ring: 142 86% 28%;
-  --radius: 0.75rem;
+  :root {
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 40% 98%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --card: 224 71% 4%;
+    --card-foreground: 210 40% 98%;
+    --primary: 142 86% 28%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 222.2 47.4% 1.2%;
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 142 86% 28%;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -66,7 +66,7 @@ All colors MUST be HSL.
     --success: 142 71% 55%;
     --warning: 48 96% 63%;
     --info: 220 91% 71%;
-    
+
     /* Dark gradients */
     --gradient-primary: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 65%));
     --gradient-secondary: linear-gradient(135deg, hsl(259 100% 65%), hsl(259 100% 85%));
@@ -84,23 +84,62 @@ All colors MUST be HSL.
   }
 }
 
+/* Base layout and scrolling behavior */
+@layer base {
+  html, body {
+    height: 100%;
+    background-color: hsl(var(--background));
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
   }
 
   body {
     @apply bg-background text-foreground;
     background: var(--gradient-background);
-    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    line-height: 1.6;
   }
 
-  /* Force dark mode */
-  html {
-    @apply dark;
+  /* Force dark mode and enable smooth scrolling */
+  @layer base {
+    html {
+      @apply dark;
+      scroll-behavior: smooth;
+      scrollbar-gutter: stable both-edges;
+    }
   }
+
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+
+  /* WebKit scrollbar styling */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-stable { scrollbar-gutter: stable both-edges; }
 }
 
+/* Components and layout utilities */
 @layer components {
   .calorie-card {
     background: var(--gradient-card);
@@ -158,16 +197,32 @@ All colors MUST be HSL.
 
   .dashboard-grid {
     display: grid;
-    gap: 1.5rem;
+    gap: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  @media (min-width: 640px) {
+    .dashboard-grid { gap: 1.25rem; }
+  }
+  @media (min-width: 1024px) {
+    .dashboard-grid { gap: 1.5rem; }
+  }
+  @media (min-width: 1280px) {
+    .dashboard-grid { gap: 2rem; }
   }
 
   .metric-card {
     background: var(--gradient-card);
     border: 1px solid hsl(var(--border));
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-radius: var(--radius);
     transition: all 0.3s ease;
+  }
+  @media (min-width: 640px) {
+    .metric-card { padding: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .metric-card { padding: 1.75rem; }
   }
 
   .metric-card:hover {
