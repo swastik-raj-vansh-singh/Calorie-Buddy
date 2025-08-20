@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface Meal {
   id: number;
+  dbId?: string;
   name: string;
   calories: number;
   protein: number;
@@ -87,6 +88,8 @@ const Index = () => {
   const [proteinConsumedInput, setProteinConsumedInput] = useState('0');
   const [isEditingCaloriesConsumed, setIsEditingCaloriesConsumed] = useState(false);
   const [isEditingProteinConsumed, setIsEditingProteinConsumed] = useState(false);
+  const [showEditGoalsDialog, setShowEditGoalsDialog] = useState(false);
+  const [editGoalsMode, setEditGoalsMode] = useState<'calorie' | 'protein'>('calorie');
   
   // Services
   const dataService = new SupabaseDataService();
@@ -112,6 +115,17 @@ const Index = () => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Load device preference for goalType even for authenticated users
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem('calorieBuddyData');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        if (data.goalType) setGoalType(data.goalType);
+      }
+    } catch {}
   }, []);
 
   // Load data based on auth status
@@ -170,6 +184,7 @@ const Index = () => {
       // Convert database meals to local format
       const convertedMeals: Meal[] = todayMeals.map(meal => ({
         id: parseInt(meal.id.slice(-8), 16), // Convert UUID to number for compatibility
+        dbId: meal.id,
         name: meal.name,
         calories: meal.calories,
         protein: meal.protein,
@@ -215,6 +230,26 @@ const Index = () => {
   useEffect(() => {
     setProteinConsumedInput(String(Math.max(0, Number(proteinConsumed.toFixed(1)))));
   }, [proteinConsumed]);
+
+  // Prefill edit target inputs with current targets whenever the dialog opens
+  useEffect(() => {
+    if (showEditGoalsDialog) {
+      setCalorieGoalInput(String(calorieGoal));
+      setProteinGoalInput(String(proteinGoal));
+    }
+  }, [showEditGoalsDialog, calorieGoal, proteinGoal]);
+
+  // Persist goalType as a device preference (even for authenticated users)
+  useEffect(() => {
+    try {
+      const savedDataRaw = localStorage.getItem('calorieBuddyData');
+      const saved = savedDataRaw ? JSON.parse(savedDataRaw) : {};
+      localStorage.setItem('calorieBuddyData', JSON.stringify({
+        ...saved,
+        goalType,
+      }));
+    } catch {}
+  }, [goalType]);
 
   // Save data to localStorage for non-authenticated users only
   useEffect(() => {
@@ -353,7 +388,7 @@ const Index = () => {
     // Save to database if user is authenticated
     if (user) {
       try {
-        await dataService.addMeal({
+        const saved = await dataService.addMeal({
           name: newMeal.name,
           calories: newMeal.calories,
           protein: newMeal.protein,
@@ -362,6 +397,7 @@ const Index = () => {
           fat: newMeal.fat,
           fiber: newMeal.fiber,
         });
+        newMeal.dbId = saved.id;
       } catch (error) {
         console.error('Error saving meal:', error);
         toast({
@@ -390,8 +426,9 @@ const Index = () => {
     // Save to database if user is authenticated
     if (user) {
       try {
+        const savedMeals: Meal[] = [];
         for (const item of items) {
-          await dataService.addMeal({
+          const saved = await dataService.addMeal({
             name: item.name,
             calories: item.calories,
             protein: item.protein,
@@ -400,7 +437,20 @@ const Index = () => {
             fat: item.fat,
             fiber: item.fiber,
           });
+          savedMeals.push({
+            id: parseInt(saved.id.slice(-8), 16),
+            dbId: saved.id,
+            name: saved.name,
+            calories: saved.calories,
+            protein: saved.protein,
+            type: saved.meal_type,
+            carbs: saved.carbs,
+            fat: saved.fat,
+            fiber: saved.fiber,
+            aiEnhanced: true,
+          });
         }
+        setTodayMeals(prev => [...prev, ...savedMeals]);
       } catch (error) {
         console.error('Error saving meals:', error);
         toast({
@@ -410,9 +460,9 @@ const Index = () => {
         });
         return;
       }
+    } else {
+      setTodayMeals(prev => [...prev, ...items]);
     }
-    
-    setTodayMeals(prev => [...prev, ...items]);
     setCaloriesConsumed(prev => prev + totalCalories);
     setProteinConsumed(prev => prev + totalProtein);
     setShowFoodParser(false);
@@ -439,7 +489,7 @@ const Index = () => {
     // Save to database if user is authenticated
     if (user) {
       try {
-        await dataService.addMeal({
+        const saved = await dataService.addMeal({
           name: newMeal.name,
           calories: newMeal.calories,
           protein: newMeal.protein,
@@ -448,6 +498,7 @@ const Index = () => {
           fat: newMeal.fat,
           fiber: newMeal.fiber,
         });
+        newMeal.dbId = saved.id;
       } catch (error) {
         console.error('Error saving meal:', error);
         toast({
@@ -478,7 +529,7 @@ const Index = () => {
     // Update in database if user is authenticated
     if (user) {
       try {
-        await dataService.updateMeal(updatedMeal.id.toString(), {
+        await dataService.updateMeal(updatedMeal.dbId || updatedMeal.id.toString(), {
           name: updatedMeal.name,
           calories: updatedMeal.calories,
           protein: updatedMeal.protein,
@@ -561,47 +612,53 @@ const Index = () => {
   };
 
   // Handle saving manual edits to consumed calories
-  const handleSaveCaloriesConsumed = () => {
+  const handleSaveCaloriesConsumed = async () => {
   const parsed = parseFloat(caloriesConsumedInput);
   const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
-  setCalorieGoal(newValue);
+  const delta = newValue - caloriesConsumed;
   setIsEditingCaloriesConsumed(false);
 
-  // Save goals to database if user is authenticated
-  if (user && newValue !== calorieGoal) {
+  if (delta !== 0) {
     try {
-      dataService.updateUserGoals(newValue, proteinGoal);
+      await handleAddAdjustmentMeal('Manual calorie adjustment', delta, 0, 'adjustment');
+      toast({
+        title: "Calories consumed updated",
+        description: `Updated today's calories to ${newValue.toFixed(0)}`,
+      });
     } catch (error) {
-      console.error('Error saving calorie goal:', error);
+      console.error('Error applying calorie adjustment:', error);
     }
+  } else {
+    toast({
+      title: "No change",
+      description: "Calories consumed remained the same.",
+    });
   }
-
-  toast({
-    title: "Calorie goal updated",
-    description: `Target calorie goal set to ${newValue.toFixed(0)}`,
-  });
 }
 
   // Handle saving manual edits to consumed protein
-  const handleSaveProteinConsumed = () => {
+  const handleSaveProteinConsumed = async () => {
   const parsed = parseFloat(proteinConsumedInput);
   const newValue = (!isNaN(parsed) && parsed >= 0) ? parsed : 0;
-  setProteinGoal(newValue);
+  const delta = newValue - proteinConsumed;
   setIsEditingProteinConsumed(false);
 
-  // Save goals to database if user is authenticated
-  if (user && newValue !== proteinGoal) {
+  if (delta !== 0) {
     try {
-      dataService.updateUserGoals(calorieGoal, newValue);
+      await handleAddAdjustmentMeal('Manual protein adjustment', 0, delta, 'adjustment');
+      toast({
+        title: "Protein consumed updated",
+        description: `Updated today's protein to ${newValue.toFixed(1)}g`,
+      });
     } catch (error) {
-      console.error('Error saving protein goal:', error);
+      console.error('Error applying protein adjustment:', error);
     }
+  } else {
+    toast({
+      title: "No change",
+      description: "Protein consumed remained the same.",
+    });
   }
-
-  toast({
-    title: "Protein goal updated",
-    description: `Target protein goal set to ${newValue.toFixed(1)}g`,
-  });
 }
 
   // Helper to add adjustment meals for tracking manual edits
@@ -621,6 +678,7 @@ const Index = () => {
         // Update local list and totals to keep UI consistent
         const converted: Meal = {
           id: parseInt(saved.id.slice(-8), 16),
+          dbId: saved.id,
           name: saved.name,
           calories: saved.calories,
           protein: saved.protein,
@@ -639,24 +697,41 @@ const Index = () => {
       } catch (error) {
         console.error('Error saving adjustment meal:', error);
       }
+    } else {
+      // Guest mode: update local state only
+      const localAdjustment: Meal = {
+        id: Date.now(),
+        name,
+        calories,
+        protein,
+        type,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        aiEnhanced: true,
+      };
+      const updatedMeals = [localAdjustment, ...todayMeals];
+      setTodayMeals(updatedMeals);
+      const newCaloriesConsumed = updatedMeals.reduce((sum, m) => sum + m.calories, 0);
+      const newProteinConsumed = updatedMeals.reduce((sum, m) => sum + m.protein, 0);
+      setCaloriesConsumed(newCaloriesConsumed);
+      setProteinConsumed(newProteinConsumed);
     }
   };
 
   // Handle deleting a meal
   const handleDeleteMeal = async (meal: Meal, index: number) => {
-    // Remove from database if user is authenticated
-    if (user) {
+    // Attempt database deletion if user is authenticated and meal has a dbId
+    if (user && meal.dbId) {
       try {
-        await dataService.deleteMeal(meal.id.toString());
+        await dataService.deleteMeal(meal.dbId);
       } catch (error) {
-        console.error('Error deleting meal:', error);
-        toast({
-          title: "Error deleting meal",
-          description: "There was an issue deleting your meal. Please try again.",
-          variant: "destructive",
-        });
-        return;
+        console.error('Error deleting meal from database:', error);
+        // Continue to remove locally even if server deletion fails
       }
+    } else if (user && !meal.dbId) {
+      // No dbId available (e.g., legacy/local item carried into authenticated state)
+      console.warn('Deleting meal without dbId; removing locally only.');
     }
 
     // Update local state
@@ -697,6 +772,69 @@ const Index = () => {
     }
     setIsOnboarding(false);
   };
+
+  // Save edits to target calorie/protein goals
+  const handleSaveGoals = async () => {
+    try {
+      if (editGoalsMode === 'calorie') {
+        const parsedCal = parseInt((calorieGoalInput || '').trim(), 10);
+        const newCal = Number.isFinite(parsedCal) && parsedCal > 0 ? parsedCal : calorieGoal;
+
+        setCalorieGoal(newCal);
+        setCalorieGoalInput(String(newCal));
+
+        if (user) {
+          await dataService.updateUserGoals(newCal, proteinGoal);
+        }
+        try {
+          const savedRaw = localStorage.getItem('calorieBuddyData');
+          const saved = savedRaw ? JSON.parse(savedRaw) : {};
+          localStorage.setItem('calorieBuddyData', JSON.stringify({
+            ...saved,
+            calorieGoal: newCal,
+          }));
+        } catch {}
+
+        toast({
+          title: 'Target updated',
+          description: `Calorie target set to ${newCal} cal`,
+        });
+      } else {
+        const parsedProt = parseInt((proteinGoalInput || '').trim(), 10);
+        const newProt = Number.isFinite(parsedProt) && parsedProt > 0 ? parsedProt : proteinGoal;
+
+        setProteinGoal(newProt);
+        setProteinGoalInput(String(newProt));
+
+        if (user) {
+          await dataService.updateUserGoals(calorieGoal, newProt);
+        }
+        try {
+          const savedRaw = localStorage.getItem('calorieBuddyData');
+          const saved = savedRaw ? JSON.parse(savedRaw) : {};
+          localStorage.setItem('calorieBuddyData', JSON.stringify({
+            ...saved,
+            proteinGoal: newProt,
+          }));
+        } catch {}
+
+        toast({
+          title: 'Target updated',
+          description: `Protein target set to ${newProt} g`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating goals:', error);
+      toast({
+        title: 'Update failed',
+        description: 'There was an issue saving your targets. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setShowEditGoalsDialog(false);
+    }
+  };
+
 
   const handleQuickAdd = (mealType: string) => {
     setSelectedMealType(mealType);
@@ -1023,9 +1161,11 @@ const Index = () => {
                     <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">Daily Calorie Goal</span>
                     <span className="sm:hidden">Calories</span>
-                    <Button size="sm" variant="outline" className="ml-auto" onClick={() => setIsEditingCaloriesConsumed(prev => !prev)}>
-                      {isEditingCaloriesConsumed ? 'Done' : 'Edit'}
-                    </Button>
+                    <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+                      <Button size="sm" variant="secondary" onClick={() => { setEditGoalsMode('calorie'); setCalorieGoalInput(String(calorieGoal)); setShowEditGoalsDialog(true); }}>
+                        Edit Target
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -1054,7 +1194,7 @@ const Index = () => {
                           <Button size="sm" variant="ghost" onClick={() => { setIsEditingCaloriesConsumed(false); setCaloriesConsumedInput(String(Math.round(caloriesConsumed))); }}>Cancel</Button>
                         </div>
                       )}</span>
-                      <span className="text-sm sm:text-lg text-foreground">/ {calorieGoal}</span>
+                      <span className="text-sm sm:text-lg text-foreground whitespace-nowrap">/ {calorieGoal}</span>
                     </div>
                     <Progress 
                       value={(caloriesConsumed / calorieGoal) * 100} 
@@ -1078,9 +1218,11 @@ const Index = () => {
                   <CardTitle className="text-xs sm:text-sm font-medium text-foreground flex items-center gap-2">
                     <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                     Protein Goal
-                    <Button size="sm" variant="outline" className="ml-auto" onClick={() => setIsEditingProteinConsumed(prev => !prev)}>
-                      {isEditingProteinConsumed ? 'Done' : 'Edit'}
-                    </Button>
+                    <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+                      <Button size="sm" variant="secondary" onClick={() => { setEditGoalsMode('protein'); setProteinGoalInput(String(proteinGoal)); setShowEditGoalsDialog(true); }}>
+                        Edit Target
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -1104,7 +1246,7 @@ const Index = () => {
                           <Button size="sm" variant="ghost" onClick={() => { setIsEditingProteinConsumed(false); setProteinConsumedInput(String(Number(proteinConsumed.toFixed(1)))); }}>Cancel</Button>
                         </div>
                       )}</span>
-                      <span className="text-sm sm:text-lg text-foreground">/ {proteinGoal}g</span>
+                      <span className="text-sm sm:text-lg text-foreground whitespace-nowrap">/ {proteinGoal}g</span>
                     </div>
                     <Progress 
                       value={(proteinConsumed / proteinGoal) * 100} 
@@ -1476,6 +1618,81 @@ const Index = () => {
                 <Brain className="h-5 w-5 mx-auto mb-2 text-primary" />
                 Our AI can analyze any food combination and provide accurate nutrition data.
                 Just type what you're eating and press Enter or click Search!
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Target Modal (context-aware) */}
+        <Dialog open={showEditGoalsDialog} onOpenChange={setShowEditGoalsDialog}>
+          <DialogContent className="max-w-md bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Target className="h-5 w-5" />
+                {editGoalsMode === 'calorie' ? 'Edit Calorie Target' : 'Edit Protein Target'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {editGoalsMode === 'calorie' && (
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Daily Calorie Goal
+                  </label>
+                  <Input
+                    type="number"
+                    value={calorieGoalInput}
+                    onChange={(e) => setCalorieGoalInput(e.target.value)}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      const n = parseInt(v, 10);
+                      if (Number.isFinite(n) && n > 0) {
+                        setCalorieGoal(n);
+                        setCalorieGoalInput(String(n));
+                      }
+                    }}
+                    className="text-center bg-background/50 border-primary/20"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Recommended: 1500-2500 calories</p>
+                </div>
+              )}
+
+              {editGoalsMode === 'protein' && (
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Daily Protein Goal (grams)
+                  </label>
+                  <Input
+                    type="number"
+                    value={proteinGoalInput}
+                    onChange={(e) => setProteinGoalInput(e.target.value)}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      const n = parseInt(v, 10);
+                      if (Number.isFinite(n) && n > 0) {
+                        setProteinGoal(n);
+                        setProteinGoalInput(String(n));
+                      }
+                    }}
+                    className="text-center bg-background/50 border-primary/20"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Recommended: 0.8-2g per kg body weight</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowEditGoalsDialog(false);
+                    setCalorieGoalInput(String(calorieGoal));
+                    setProteinGoalInput(String(proteinGoal));
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveGoals}>
+                  Save Target
+                </Button>
               </div>
             </div>
           </DialogContent>

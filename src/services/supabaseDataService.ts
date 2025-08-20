@@ -104,29 +104,40 @@ export class SupabaseDataService {
 
   // Goals
   async getUserGoals(): Promise<UserGoals | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('daily_goals')
       .select('*')
-      .single();
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1);
     
-    if (error && (error as any).code !== 'PGRST116') throw error;
-    return data as any;
+    if (error) throw error;
+    const row = (data && data.length > 0) ? data[0] : null;
+    return row as any;
   }
 
   async updateUserGoals(calorieGoal: number, proteinGoal: number): Promise<UserGoals> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
+    // Use upsert to avoid race conditions and UNIQUE(user_id) conflicts
     const { data, error } = await supabase
       .from('daily_goals')
-      .upsert({
-        user_id: user.id,
-        calorie_goal: calorieGoal,
-        protein_goal: proteinGoal
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          calorie_goal: calorieGoal,
+          protein_goal: proteinGoal,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single();
-    
+
     if (error) throw error;
     return data as any;
   }

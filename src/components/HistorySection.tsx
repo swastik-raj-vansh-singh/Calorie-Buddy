@@ -136,11 +136,11 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ historicalData, 
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-foreground">Meals Logged</span>
                         <span className="text-sm text-muted-foreground">
-                          {day.mealsCount || 0} meals
+                          {(day.mealsCount ?? day.meals ?? 0)} meals
                         </span>
                       </div>
                       <div className="flex gap-1">
-                        {Array.from({ length: Math.min(day.mealsCount || 0, 6) }).map((_, i) => (
+                        {Array.from({ length: Math.min((day.mealsCount ?? day.meals ?? 0), 6) }).map((_, i) => (
                           <div key={i} className="w-2 h-2 bg-accent rounded-full" />
                         ))}
                       </div>
