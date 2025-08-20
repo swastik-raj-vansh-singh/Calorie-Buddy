@@ -739,6 +739,34 @@ const Index = () => {
     setShowResetDialog(false);
   };
 
+  // Reset tracking for authenticated users without signing out
+  const handleResetTracking = async () => {
+    try {
+      if (user) {
+        await dataService.clearAllMeals();
+      } else {
+        resetData();
+        return;
+      }
+
+      setTodayMeals([]);
+      setHistoricalData([]);
+      setCaloriesConsumed(0);
+      setProteinConsumed(0);
+
+      toast({
+        title: 'Tracking reset',
+        description: 'All tracking data was cleared. Starting fresh from today. Your account remains signed in.',
+      });
+    } catch (error) {
+      console.error('Error resetting tracking:', error);
+      toast({
+        title: 'Reset failed',
+        description: 'There was an issue resetting your tracking. Please try again.',
+      });
+    }
+  };
+
   const quickSuggestions = [
     'Rice and Dal', 'Roti with Sabzi', 'Chicken Curry', 'Paneer Tikka', 'Biryani',
     'Naan', 'Samosa', 'Kachori', 'Chole Bhature', 'Dosa', 'Idli', 'Uttapam',
@@ -1274,7 +1302,7 @@ const Index = () => {
         )}
 
         {currentView === 'history' && (
-          <HistorySection historicalData={historicalData} />
+          <HistorySection historicalData={historicalData} isAuthenticated={!!user} onReset={handleResetTracking} />
         )}
 
         {currentView === 'help' && (

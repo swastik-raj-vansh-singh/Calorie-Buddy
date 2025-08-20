@@ -1,13 +1,17 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Calendar, TrendingUp, TrendingDown, RotateCcw } from 'lucide-react';
 
 interface HistorySectionProps {
   historicalData: any[];
+  isAuthenticated?: boolean;
+  onReset?: () => void;
 }
 
-export const HistorySection: React.FC<HistorySectionProps> = ({ historicalData }) => {
+export const HistorySection: React.FC<HistorySectionProps> = ({ historicalData, isAuthenticated = false, onReset }) => {
   const sortedData = [...historicalData].reverse(); // Most recent first
 
   return (
@@ -15,6 +19,31 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ historicalData }
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2">📅 Your Progress History</h2>
         <p className="text-muted-foreground">Track your daily nutrition over time</p>
+
+        {isAuthenticated && (
+          <div className="mt-4">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="inline-flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Reset tracking
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset Tracking</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all your logged meals and progress history and start fresh from today. Your account stays signed in.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onReset && onReset()}>Confirm reset</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
 
       {sortedData.length === 0 ? (

@@ -89,6 +89,19 @@ export class SupabaseDataService {
     return data;
   }
 
+  // Add: Clear all meals for the current user (used by reset functionality)
+  async clearAllMeals(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('meals')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+  }
+
   // Goals
   async getUserGoals(): Promise<UserGoals | null> {
     const { data, error } = await supabase
@@ -96,8 +109,8 @@ export class SupabaseDataService {
       .select('*')
       .single();
     
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    if (error && (error as any).code !== 'PGRST116') throw error;
+    return data as any;
   }
 
   async updateUserGoals(calorieGoal: number, proteinGoal: number): Promise<UserGoals> {
@@ -115,7 +128,7 @@ export class SupabaseDataService {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as any;
   }
 
   // Profile
@@ -125,8 +138,8 @@ export class SupabaseDataService {
       .select('*')
       .single();
     
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    if (error && (error as any).code !== 'PGRST116') throw error;
+    return data as any;
   }
 
   async updateUserProfile(displayName: string): Promise<UserProfile> {
@@ -143,7 +156,7 @@ export class SupabaseDataService {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as any;
   }
 
   // Analytics
