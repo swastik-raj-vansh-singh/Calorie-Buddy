@@ -4,7 +4,8 @@
 
 CalorieBuddy is a cutting-edge web application that combines artificial intelligence, computer vision, and nutrition science to revolutionize how you track and understand your dietary intake. Whether you're bulking, cutting, or maintaining, CalorieBuddy provides the tools you need to achieve your nutrition goals.
 
-![CalorieBuddy Dashboard](https://via.placeholder.com/800x400/4f46e5/ffffff?text=CalorieBuddy+Dashboard)
+<img width="1183" height="676" alt="image" src="https://github.com/user-attachments/assets/0f7df04d-bbb7-4fd4-81f2-420eca9d52ac" />
+
 
 ## ✨ Key Features
 
