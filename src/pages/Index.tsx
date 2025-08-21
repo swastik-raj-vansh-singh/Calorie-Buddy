@@ -95,6 +95,45 @@ const Index = () => {
   const dataService = new SupabaseDataService();
   const enhancedOpenaiService = new EnhancedOpenAIService(import.meta.env.VITE_OPENAI_API_KEY);
 
+  // Tracking day utilities: day starts at 4 AM local time
+  const TRACKING_RESET_HOUR = 4; // 4 AM local
+  const getTrackingDayStart = (now: Date = new Date()): Date => {
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const fourAmToday = new Date(startOfToday);
+    fourAmToday.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+    if (now < fourAmToday) {
+      const prev = new Date(startOfToday);
+      prev.setDate(prev.getDate() - 1);
+      prev.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+      return prev;
+    }
+    const cur = new Date(startOfToday);
+    cur.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+    return cur;
+  };
+  const getNextResetTime = (now: Date = new Date()): Date => {
+    const next = new Date(now);
+    next.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+    if (now >= next) next.setDate(next.getDate() + 1);
+    return next;
+  };
+  const getTrackingDayKey = (now: Date = new Date()): string => {
+    const start = getTrackingDayStart(now);
+    return start.toISOString().slice(0, 10); // YYYY-MM-DD
+  };
+  const getPrevTrackingDayKey = (now: Date = new Date()): string => {
+    const start = getTrackingDayStart(now);
+    const prev = new Date(start);
+    prev.setDate(prev.getDate() - 1);
+    return prev.toISOString().slice(0, 10);
+  };
+  const formatDayLabelFromKey = (dayKey: string): string => {
+    const [y, m, d] = dayKey.split('-').map(Number);
+    const dt = new Date((y as number), (m as number) - 1, (d as number));
+    return dt.toLocaleDateString();
+  };
+
   // Sync item editor string input when opening editor
   useEffect(() => {
     if (showItemEditor) {
@@ -131,6 +170,23 @@ const Index = () => {
   // Load data based on auth status
   useEffect(() => {
     if (authLoading) return;
+
+    // On initial load, check if a reset is needed (e.g., app reopened after 4 AM boundary)
+    try {
+      const savedDataRaw = localStorage.getItem('calorieBuddyData');
+      const saved = savedDataRaw ? JSON.parse(savedDataRaw) : {};
+      const savedKey = saved.currentDayKey as string | undefined;
+      const currentKey = getTrackingDayKey();
+      if (savedKey && savedKey !== currentKey) {
+        // Defer reset slightly to avoid clashing with auth-driven loads
+        setTimeout(() => {
+          performDailyReset();
+        }, 0);
+      } else if (!savedKey) {
+        // Initialize current day key if absent
+        localStorage.setItem('calorieBuddyData', JSON.stringify({ ...saved, currentDayKey: currentKey }));
+      }
+    } catch {}
     
     if (user) {
       // User is authenticated - load from database
@@ -156,6 +212,91 @@ const Index = () => {
     }
   }, [user, authLoading]);
 
+  const performDailyReset = async () => {
+    try {
+      const now = new Date();
+      const prevKey = getPrevTrackingDayKey(now);
+      const currentKey = getTrackingDayKey(now);
+
+      if (user) {
+        // For authenticated users, DB already keeps meal history; refresh stats and clear today state
+        setTodayMeals([]);
+        setCaloriesConsumed(0);
+        setProteinConsumed(0);
+        try {
+          const stats = await dataService.getDailyMealStats(7);
+          setHistoricalData(stats);
+        } catch (e) {
+          console.error('Error refreshing stats during reset:', e);
+        }
+        try {
+          const savedRaw = localStorage.getItem('calorieBuddyData');
+          const saved = savedRaw ? JSON.parse(savedRaw) : {};
+          localStorage.setItem('calorieBuddyData', JSON.stringify({
+            ...saved,
+            currentDayKey: currentKey,
+            todayMeals: [],
+            caloriesConsumed: 0,
+            proteinConsumed: 0,
+          }));
+        } catch {}
+      } else {
+        // Guest users: push yesterday's summary into local history before clearing
+        const prevLabel = formatDayLabelFromKey(prevKey);
+        const prevSummary = {
+          date: prevLabel,
+          calories: Math.max(0, Math.round(caloriesConsumed)),
+          protein: Number(proteinConsumed.toFixed(1)),
+          mealsCount: todayMeals.length,
+        } as any;
+        const updatedHistorical = [...historicalData];
+        const idx = updatedHistorical.findIndex((d: any) => d.date === prevLabel);
+        if (idx >= 0) updatedHistorical[idx] = prevSummary; else updatedHistorical.push(prevSummary);
+        setHistoricalData(updatedHistorical);
+        setTodayMeals([]);
+        setCaloriesConsumed(0);
+        setProteinConsumed(0);
+        try {
+          const savedRaw = localStorage.getItem('calorieBuddyData');
+          const saved = savedRaw ? JSON.parse(savedRaw) : {};
+          localStorage.setItem('calorieBuddyData', JSON.stringify({
+            ...saved,
+            currentDayKey: currentKey,
+            historicalData: updatedHistorical,
+            todayMeals: [],
+            caloriesConsumed: 0,
+            proteinConsumed: 0,
+          }));
+        } catch {}
+      }
+
+      toast({
+        title: 'New day started',
+        description: 'Tracking has been reset for the new day (4 AM boundary).',
+      });
+    } catch (error) {
+      console.error('Daily reset error:', error);
+    }
+  };
+
+  // Schedule automatic reset at next 4 AM local time
+  useEffect(() => {
+    let timer: number | undefined;
+    const schedule = () => {
+      const next = getNextResetTime();
+      const ms = next.getTime() - Date.now();
+      if (ms <= 0) return;
+      timer = window.setTimeout(async () => {
+        await performDailyReset();
+        schedule();
+      }, ms);
+    };
+    schedule();
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [user]);
+
   const loadUserData = async () => {
     if (!user) return;
     
@@ -173,16 +314,18 @@ const Index = () => {
         await dataService.updateUserGoals(calorieGoal, proteinGoal);
       }
       
-      // Load today's meals
+      // Load today's meals (respect 4 AM boundary)
       const meals = await dataService.getMeals();
-      const todayMeals = meals.filter(meal => {
-        const mealDate = new Date(meal.created_at).toDateString();
-        const today = new Date().toDateString();
-        return mealDate === today;
+      const dayStart = getTrackingDayStart();
+      const nextStart = new Date(dayStart.getTime());
+      nextStart.setDate(nextStart.getDate() + 1);
+      const todayMealsDb = meals.filter(meal => {
+        const created = new Date(meal.created_at);
+        return created >= dayStart && created < nextStart;
       });
       
       // Convert database meals to local format
-      const convertedMeals: Meal[] = todayMeals.map(meal => ({
+      const convertedMeals: Meal[] = todayMealsDb.map(meal => ({
         id: parseInt(meal.id.slice(-8), 16), // Convert UUID to number for compatibility
         dbId: meal.id,
         name: meal.name,
@@ -211,6 +354,13 @@ const Index = () => {
       setIsWelcome(false);
       setIsOnboarding(false);
       setUserName(user.email?.split('@')[0] || 'User');
+      
+      // Persist current tracking day key
+      try {
+        const savedRaw = localStorage.getItem('calorieBuddyData');
+        const saved = savedRaw ? JSON.parse(savedRaw) : {};
+        localStorage.setItem('calorieBuddyData', JSON.stringify({ ...saved, currentDayKey: getTrackingDayKey() }));
+      } catch {}
       
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -254,34 +404,38 @@ const Index = () => {
   // Save data to localStorage for non-authenticated users only
   useEffect(() => {
     if (!user && !isWelcome && !isOnboarding && userName) {
-      const today = new Date().toLocaleDateString();
+      const currentKey = getTrackingDayKey();
+      const label = formatDayLabelFromKey(currentKey);
       
-      // Update historical data
+      // Update historical data using 4 AM tracking day label
       const updatedHistoricalData = [...historicalData];
-      const todayIndex = updatedHistoricalData.findIndex(day => day.date === today);
-      
-      const todayData = {
-        date: today,
-        calories: caloriesConsumed,
-        protein: proteinConsumed,
+      const idx = updatedHistoricalData.findIndex(day => day.date === label);
+      const dayData = {
+        date: label,
+        calories: Math.max(0, Math.round(caloriesConsumed)),
+        protein: Number(proteinConsumed.toFixed(1)),
         mealsCount: todayMeals.length
       };
 
-      if (todayIndex >= 0) {
-        updatedHistoricalData[todayIndex] = todayData;
+      if (idx >= 0) {
+        updatedHistoricalData[idx] = dayData;
       } else {
-        updatedHistoricalData.push(todayData);
+        updatedHistoricalData.push(dayData);
       }
 
+      const prevRaw = localStorage.getItem('calorieBuddyData');
+      const prev = prevRaw ? JSON.parse(prevRaw) : {};
       const dataToSave = {
+        ...prev,
         userName,
         calorieGoal,
         proteinGoal,
-        caloriesConsumed,
-        proteinConsumed,
+        caloriesConsumed: dayData.calories,
+        proteinConsumed: dayData.protein,
         goalType,
         todayMeals,
-        historicalData: updatedHistoricalData
+        historicalData: updatedHistoricalData,
+        currentDayKey: currentKey,
       };
       localStorage.setItem('calorieBuddyData', JSON.stringify(dataToSave));
       setHistoricalData(updatedHistoricalData);

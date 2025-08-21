@@ -172,26 +172,61 @@ export class SupabaseDataService {
 
   // Analytics
   async getDailyMealStats(days: number = 7): Promise<any[]> {
+    // Helper: tracking day starts at 4 AM local time
+    const TRACKING_RESET_HOUR = 4;
+    const getTrackingDayStartFor = (d: Date): Date => {
+      const base = new Date(d);
+      const startOfDay = new Date(base);
+      startOfDay.setHours(0, 0, 0, 0);
+      const fourAm = new Date(startOfDay);
+      fourAm.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+      if (base < fourAm) {
+        const prev = new Date(startOfDay);
+        prev.setDate(prev.getDate() - 1);
+        prev.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+        return prev;
+      }
+      const cur = new Date(startOfDay);
+      cur.setHours(TRACKING_RESET_HOUR, 0, 0, 0);
+      return cur;
+    };
+
+    // Fetch meals since the start of the desired window aligned to the tracking day
+    const now = new Date();
+    const currentStart = getTrackingDayStartFor(now);
+    const windowStart = new Date(currentStart);
+    windowStart.setDate(windowStart.getDate() - (days - 1));
+
     const { data, error } = await supabase
       .from('meals')
       .select('calories, protein, created_at')
-      .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', windowStart.toISOString())
       .order('created_at', { ascending: true });
     
     if (error) throw error;
     
-    // Group by date
-    const groupedData = (data || []).reduce((acc: any, meal) => {
-      const date = new Date(meal.created_at).toDateString();
-      if (!acc[date]) {
-        acc[date] = { date, calories: 0, protein: 0, meals: 0 };
+    // Group by tracking day (4 AM boundary) and sort by day start
+    const groupedMap: Record<string, { date: string; calories: number; protein: number; meals: number; _ts: number }> = {};
+    for (const meal of data || []) {
+      const created = new Date(meal.created_at);
+      const dayStart = getTrackingDayStartFor(created);
+      const key = dayStart.toISOString().slice(0, 10); // YYYY-MM-DD key
+      if (!groupedMap[key]) {
+        groupedMap[key] = {
+          date: dayStart.toLocaleDateString(),
+          calories: 0,
+          protein: 0,
+          meals: 0,
+          _ts: dayStart.getTime(),
+        };
       }
-      acc[date].calories += meal.calories;
-      acc[date].protein += meal.protein;
-      acc[date].meals += 1;
-      return acc;
-    }, {});
-    
-    return Object.values(groupedData);
+      groupedMap[key].calories += meal.calories;
+      groupedMap[key].protein += meal.protein;
+      groupedMap[key].meals += 1;
+    }
+
+    return Object.values(groupedMap)
+      .sort((a, b) => a._ts - b._ts)
+      .map(({ _ts, ...rest }) => rest);
   }
 }
