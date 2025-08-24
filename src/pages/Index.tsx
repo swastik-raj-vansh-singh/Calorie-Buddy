@@ -1607,7 +1607,7 @@ const Index = () => {
 
         {/* AI-Powered Food Search Modal */}
         <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
-          <DialogContent className="max-w-2xl max-h-[80dvh] overflow-y-auto bg-card border-border scrollbar-stable">
+          <DialogContent className="max-w-4xl max-h-[80dvh] overflow-y-auto bg-card border-border scrollbar-stable">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
                 <Brain className="h-5 w-5 text-primary" />
@@ -1627,7 +1627,19 @@ const Index = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleFoodSearch()}
-                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground h-12 pr-36 sm:pr-40"
+                  onFocus={(e) => {
+                    const len = e.currentTarget.value.length;
+                    try { e.currentTarget.setSelectionRange(len, len); } catch {}
+                  }}
+                  onMouseUp={(e) => {
+                    const input = e.currentTarget;
+                    if (input.selectionStart === 0 && input.selectionEnd === input.value.length) {
+                      const len = input.value.length;
+                      try { input.setSelectionRange(len, len); } catch {}
+                      e.preventDefault();
+                    }
+                  }}
+                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground h-12 pr-36 sm:pr-40 whitespace-nowrap overflow-x-auto text-sm sm:text-base"
                 />
                 <div className="absolute right-1.5 top-1.5 flex gap-1">
                   <Button 
