@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +17,7 @@ import { WeightCalculator } from '@/components/WeightCalculator';
 import { FoodParser } from '@/components/FoodParser';
 import { ImageFoodRecognition } from '@/components/ImageFoodRecognition';
 import { EnhancedOpenAIService } from '@/services/enhancedOpenAIService';
+import { OpenAIInputParsingService } from '@/services/openaiInputParsingService';
 import { useAuth } from '@/hooks/useAuth';
 import { SupabaseDataService, DatabaseMeal } from '@/services/supabaseDataService';
 import { useNavigate } from 'react-router-dom';
@@ -94,6 +96,7 @@ const Index = () => {
   // Services
   const dataService = new SupabaseDataService();
   const enhancedOpenaiService = new EnhancedOpenAIService(import.meta.env.VITE_OPENAI_API_KEY);
+  const inputParsingService = new OpenAIInputParsingService(import.meta.env.VITE_OPENAI_API_KEY);
 
   // Tracking day utilities: day starts at 4 AM local time
   const TRACKING_RESET_HOUR = 4; // 4 AM local
@@ -725,18 +728,39 @@ const Index = () => {
   };
 
   const handleImageFoodDetected = (foodDescription: string) => {
-    const term = foodDescription.trim();
+    const raw = (foodDescription || '').trim();
+    let term = raw
+      .replace(/^sure[\s,!-]*/i, '')
+      .replace(/^ok(ay)?[\s,!-]*/i, '')
+      .replace(/^here'?s\s+(the\s+)?(description|items?|list|breakdown)[:\-–—]*\s*/i, '')
+      .replace(/^(the\s+)?(food|items?|meals?)\s+(are|include|detected)[:\-–—]*\s*/i, '')
+      .replace(/^description[:\-–—]*\s*/i, '')
+      .replace(/^['"`\s]+|['"`\s]+$/g, '')
+      .trim();
+
     if (!term) {
       setShowImageRecognition(false);
       return;
     }
 
-    setSearchTerm(term);
     setIsAddingMeal(true);
     setIsSearching(true);
 
     (async () => {
       try {
+        // Display only food names (one per line) in the textbox
+        try {
+          const parsed = await inputParsingService.parseUserInput(term);
+          const names = (parsed.items || [])
+            .map((it: any) => (it?.name || '').toString().trim())
+            .filter((n: string) => n.length > 0)
+            .join('\n');
+          setSearchTerm(names || term);
+        } catch (_) {
+          setSearchTerm(term);
+        }
+
+        // Continue with nutrition analysis using the cleaned text
         const result = await enhancedOpenaiService.parseAndEstimateNutrition(term);
         setSearchResults(result);
         toast({
@@ -1607,7 +1631,7 @@ const Index = () => {
 
         {/* AI-Powered Food Search Modal */}
         <Dialog open={isAddingMeal} onOpenChange={setIsAddingMeal}>
-          <DialogContent className="max-w-4xl max-h-[80dvh] overflow-y-auto bg-card border-border scrollbar-stable">
+          <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="max-w-4xl max-h-[80dvh] overflow-y-auto bg-card border-border scrollbar-stable">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-foreground">
                 <Brain className="h-5 w-5 text-primary" />
@@ -1622,11 +1646,11 @@ const Index = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="relative">
-                <Input
+                <Textarea
                   placeholder="Write food items with quantity for accurate results (e.g., '2 rotis with dal', '1 cup chai with sugar')"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleFoodSearch()}
+                  onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleFoodSearch(); } }}
                   onFocus={(e) => {
                     const len = e.currentTarget.value.length;
                     try { e.currentTarget.setSelectionRange(len, len); } catch {}
@@ -1639,7 +1663,8 @@ const Index = () => {
                       e.preventDefault();
                     }
                   }}
-                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground h-12 pr-36 sm:pr-40 whitespace-nowrap overflow-x-auto text-sm sm:text-base"
+                  rows={Math.min(8, Math.max(2, (searchTerm.match(/\n/g)?.length ?? 0) + 1))}
+                  className="mb-4 bg-background/50 border-border/50 text-foreground placeholder:text-muted-foreground min-h-12 pr-36 sm:pr-40 text-sm sm:text-base resize-y"
                 />
                 <div className="absolute right-1.5 top-1.5 flex gap-1">
                   <Button 
