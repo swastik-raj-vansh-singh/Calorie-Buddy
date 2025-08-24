@@ -199,18 +199,25 @@ const Index = () => {
       const savedData = localStorage.getItem('calorieBuddyData');
       if (savedData) {
         const data = JSON.parse(savedData);
-        setIsWelcome(false);
-        setIsOnboarding(false);
-        setUserName(data.userName || '');
-        setCalorieGoal(data.calorieGoal || 2000);
-        setProteinGoal(data.proteinGoal || 150);
-        setCalorieGoalInput(String(data.calorieGoal || 2000));
-        setProteinGoalInput(String(data.proteinGoal || 150));
-        setCaloriesConsumed(data.caloriesConsumed || 0);
-        setProteinConsumed(data.proteinConsumed || 0);
-        setGoalType(data.goalType || 'bulk');
-        setTodayMeals(data.todayMeals || []);
-        setHistoricalData(data.historicalData || []);
+        const hasOnboarded = Boolean(data.hasOnboarded || data.userName);
+        if (hasOnboarded) {
+          setIsWelcome(false);
+          setIsOnboarding(false);
+          setUserName(data.userName || '');
+          setCalorieGoal(data.calorieGoal || 2000);
+          setProteinGoal(data.proteinGoal || 150);
+          setCalorieGoalInput(String(data.calorieGoal || 2000));
+          setProteinGoalInput(String(data.proteinGoal || 150));
+          setCaloriesConsumed(data.caloriesConsumed || 0);
+          setProteinConsumed(data.proteinConsumed || 0);
+          setGoalType(data.goalType || 'bulk');
+          setTodayMeals(data.todayMeals || []);
+          setHistoricalData(data.historicalData || []);
+        } else {
+          // No onboarding data yet - show welcome screen
+          setIsWelcome(true);
+          setIsOnboarding(false);
+        }
       }
     }
   }, [user, authLoading]);
@@ -948,6 +955,21 @@ const Index = () => {
         console.error('Error saving goals:', error);
       }
     }
+
+    // Persist onboarding completion for guest users
+    try {
+      const savedRaw = localStorage.getItem('calorieBuddyData');
+      const saved = savedRaw ? JSON.parse(savedRaw) : {};
+      localStorage.setItem('calorieBuddyData', JSON.stringify({
+        ...saved,
+        userName,
+        calorieGoal: finalCal,
+        proteinGoal: finalProt,
+        goalType,
+        hasOnboarded: true,
+      }));
+    } catch {}
+
     setIsOnboarding(false);
   };
 
